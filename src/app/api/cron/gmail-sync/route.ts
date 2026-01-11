@@ -27,11 +27,11 @@ import { generateEmailDraft } from "@/lib/ai/email-drafter";
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(request: NextRequest) {
-  // Verify authorization (temporarily disabled for testing)
-  // const authHeader = request.headers.get("authorization");
-  // if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  // }
+  // Verify authorization for Vercel Cron
+  const authHeader = request.headers.get("authorization");
+  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   console.log("[Gmail Sync] Starting sync...");
 
