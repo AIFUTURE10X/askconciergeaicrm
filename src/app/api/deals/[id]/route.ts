@@ -63,8 +63,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       value,
       billingPeriod,
       propertyCount,
+      propertyCountRange,
+      leadSource,
+      currentSystem,
+      painPoint,
       probability,
       expectedCloseDate,
+      nextStep,
+      followUpDate,
       closedAt,
       lostReason,
       notes,
@@ -83,9 +89,17 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (value !== undefined) updateData.value = value ? String(value) : null;
     if (billingPeriod !== undefined) updateData.billingPeriod = billingPeriod;
     if (propertyCount !== undefined) updateData.propertyCount = propertyCount;
+    if (propertyCountRange !== undefined) updateData.propertyCountRange = propertyCountRange;
+    if (leadSource !== undefined) updateData.leadSource = leadSource;
+    if (currentSystem !== undefined) updateData.currentSystem = currentSystem;
+    if (painPoint !== undefined) updateData.painPoint = painPoint;
     if (probability !== undefined) updateData.probability = probability;
     if (expectedCloseDate !== undefined) {
       updateData.expectedCloseDate = expectedCloseDate ? new Date(expectedCloseDate) : null;
+    }
+    if (nextStep !== undefined) updateData.nextStep = nextStep;
+    if (followUpDate !== undefined) {
+      updateData.followUpDate = followUpDate ? new Date(followUpDate) : null;
     }
     if (closedAt !== undefined) {
       updateData.closedAt = closedAt ? new Date(closedAt) : null;

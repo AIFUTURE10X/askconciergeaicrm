@@ -60,6 +60,12 @@ export const deals = pgTable(
     value: decimal("value", { precision: 10, scale: 2 }), // Monthly or annual value
     billingPeriod: varchar("billing_period", { length: 20 }).default("monthly"),
     propertyCount: integer("property_count").default(1), // Number of properties in deal
+    propertyCountRange: varchar("property_count_range", { length: 20 }), // "1-5", "6-20", "21-50", "50+"
+
+    // SaaS qualification fields
+    currentSystem: varchar("current_system", { length: 100 }), // What they're using now
+    painPoint: varchar("pain_point", { length: 255 }), // Why they're talking to us
+    leadSource: varchar("lead_source", { length: 50 }), // "linkedin", "referral", "cold_email", "inbound"
 
     // Probability & timing
     probability: integer("probability").default(10), // 0-100%
@@ -68,6 +74,10 @@ export const deals = pgTable(
     // Outcome tracking
     closedAt: timestamp("closed_at"),
     lostReason: varchar("lost_reason", { length: 255 }),
+
+    // Next step / follow-up
+    nextStep: text("next_step"), // What needs to happen next
+    followUpDate: timestamp("follow_up_date"), // When to follow up
 
     notes: text("notes"),
     sortOrder: integer("sort_order").default(0),
@@ -78,6 +88,7 @@ export const deals = pgTable(
     index("deals_contact_idx").on(table.contactId),
     index("deals_stage_idx").on(table.stage),
     index("deals_expected_close_idx").on(table.expectedCloseDate),
+    index("deals_follow_up_idx").on(table.followUpDate),
     index("deals_created_idx").on(table.createdAt),
   ]
 );

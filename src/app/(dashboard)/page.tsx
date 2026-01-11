@@ -17,7 +17,7 @@ import {
   CheckCircle,
   Loader2,
 } from "lucide-react";
-import { PIPELINE_STAGES, TIERS, getTier, getStage } from "@/lib/constants/pipeline";
+import { PIPELINE_STAGES, TIERS, getTier, getStage, LOST_REASONS } from "@/lib/constants/pipeline";
 import type { Deal, Contact, Reminder } from "@/lib/db/schema";
 
 type DealWithContact = Deal & { contact: Contact | null };
@@ -86,6 +86,30 @@ export default function DashboardPage() {
           (wonDeals.length / (wonDeals.length + lostDeals.length)) * 100
         )
       : 0;
+
+  // Demo-to-Close ratio (all deals in demo_scheduled or later that closed)
+  const demoDeals = deals.filter((d) =>
+    d.stage === "demo_scheduled" ||
+    d.stage === "proposal" ||
+    d.stage === "negotiation" ||
+    d.stage === "closed_won" ||
+    d.stage === "closed_lost"
+  );
+  const demoToCloseRate = demoDeals.length > 0
+    ? Math.round((wonDeals.length / demoDeals.length) * 100)
+    : 0;
+
+  // Average deal value for won deals
+  const avgDealValue = wonDeals.length > 0
+    ? wonValue / wonDeals.length
+    : 0;
+
+  // Lost reason breakdown
+  const lostReasonCounts = lostDeals.reduce((acc, deal) => {
+    const reason = deal.lostReason || "unknown";
+    acc[reason] = (acc[reason] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   // Complete reminder
   const handleCompleteReminder = async (id: string) => {
@@ -167,6 +191,54 @@ export default function DashboardPage() {
               <div className="text-2xl font-bold">{winRate}%</div>
               <p className="text-xs text-muted-foreground">
                 closed deals
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Secondary Metrics Row */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Demo → Close Rate</CardTitle>
+              <Target className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{demoToCloseRate}%</div>
+              <p className="text-xs text-muted-foreground">
+                {wonDeals.length} won from {demoDeals.length} demos
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg Deal Size</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                ${avgDealValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                from {wonDeals.length} closed deals
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Lost Deals</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                {lostDeals.length}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {Object.keys(lostReasonCounts).length > 0 && (
+                  <>Top: {LOST_REASONS.find((r) => r.id === Object.entries(lostReasonCounts).sort((a, b) => b[1] - a[1])[0]?.[0])?.label || "Unknown"}</>
+                )}
               </p>
             </CardContent>
           </Card>

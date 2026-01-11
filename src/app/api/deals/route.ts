@@ -9,11 +9,22 @@ export async function GET() {
     const dealList = await db.query.deals.findMany({
       with: {
         contact: true,
+        activities: {
+          orderBy: (activities, { desc }) => [desc(activities.createdAt)],
+          limit: 1,
+        },
       },
       orderBy: [desc(deals.createdAt)],
     });
 
-    return NextResponse.json({ deals: dealList });
+    // Add lastContactedAt from most recent activity
+    const dealsWithLastContacted = dealList.map((deal) => ({
+      ...deal,
+      lastContactedAt: deal.activities?.[0]?.createdAt || null,
+      activities: undefined, // Remove activities array, we only needed the date
+    }));
+
+    return NextResponse.json({ deals: dealsWithLastContacted });
   } catch (error) {
     console.error("Error fetching deals:", error);
     return NextResponse.json(
@@ -35,8 +46,14 @@ export async function POST(request: Request) {
       value,
       billingPeriod = "monthly",
       propertyCount = 1,
+      propertyCountRange,
+      leadSource,
+      currentSystem,
+      painPoint,
       probability = 10,
       expectedCloseDate,
+      nextStep,
+      followUpDate,
       notes,
     } = body;
 
@@ -70,8 +87,14 @@ export async function POST(request: Request) {
         value: value ? String(value) : null,
         billingPeriod,
         propertyCount,
+        propertyCountRange: propertyCountRange || null,
+        leadSource: leadSource || null,
+        currentSystem: currentSystem || null,
+        painPoint: painPoint || null,
         probability,
         expectedCloseDate: expectedCloseDate ? new Date(expectedCloseDate) : null,
+        nextStep: nextStep || null,
+        followUpDate: followUpDate ? new Date(followUpDate) : null,
         notes,
       })
       .returning();

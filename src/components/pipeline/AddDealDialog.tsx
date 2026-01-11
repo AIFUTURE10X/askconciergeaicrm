@@ -18,7 +18,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TIERS, PROPERTY_TYPES } from "@/lib/constants/pipeline";
+import {
+  TIERS,
+  PROPERTY_COUNT_RANGES,
+  CURRENT_SYSTEMS,
+  PAIN_POINTS,
+  SOURCES,
+} from "@/lib/constants/pipeline";
 import { Loader2 } from "lucide-react";
 import type { Contact } from "@/lib/db/schema";
 
@@ -32,6 +38,10 @@ interface AddDealDialogProps {
     value?: number;
     billingPeriod?: string;
     propertyCount?: number;
+    propertyCountRange?: string;
+    leadSource?: string;
+    currentSystem?: string;
+    painPoint?: string;
     expectedCloseDate?: string;
     notes?: string;
   }) => Promise<void>;
@@ -51,6 +61,10 @@ export function AddDealDialog({
     tier: "",
     billingPeriod: "monthly",
     propertyCount: 1,
+    propertyCountRange: "",
+    leadSource: "",
+    currentSystem: "",
+    painPoint: "",
     expectedCloseDate: "",
     notes: "",
   });
@@ -76,6 +90,10 @@ export function AddDealDialog({
         value: value || undefined,
         billingPeriod: formData.billingPeriod,
         propertyCount: formData.propertyCount,
+        propertyCountRange: formData.propertyCountRange || undefined,
+        leadSource: formData.leadSource || undefined,
+        currentSystem: formData.currentSystem || undefined,
+        painPoint: formData.painPoint || undefined,
         expectedCloseDate: formData.expectedCloseDate || undefined,
         notes: formData.notes || undefined,
       });
@@ -86,6 +104,10 @@ export function AddDealDialog({
         tier: "",
         billingPeriod: "monthly",
         propertyCount: 1,
+        propertyCountRange: "",
+        leadSource: "",
+        currentSystem: "",
+        painPoint: "",
         expectedCloseDate: "",
         notes: "",
       });
@@ -201,6 +223,95 @@ export function AddDealDialog({
                 ${value.toLocaleString()}
                 {formData.billingPeriod === "annual" ? "/yr" : "/mo"}
               </div>
+            </div>
+          </div>
+
+          {/* Qualification Fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="leadSource">Lead Source</Label>
+              <Select
+                value={formData.leadSource}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, leadSource: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="How did they find us?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SOURCES.map((source) => (
+                    <SelectItem key={source.id} value={source.id}>
+                      {source.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="propertyCountRange">Property Count</Label>
+              <Select
+                value={formData.propertyCountRange}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, propertyCountRange: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="How many properties?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROPERTY_COUNT_RANGES.map((range) => (
+                    <SelectItem key={range.id} value={range.id}>
+                      {range.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="currentSystem">Current System</Label>
+              <Select
+                value={formData.currentSystem}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, currentSystem: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="What are they using?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENT_SYSTEMS.map((sys) => (
+                    <SelectItem key={sys.id} value={sys.id}>
+                      {sys.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="painPoint">Pain Point</Label>
+              <Select
+                value={formData.painPoint}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, painPoint: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Why talking to us?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAIN_POINTS.map((pain) => (
+                    <SelectItem key={pain.id} value={pain.id}>
+                      {pain.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

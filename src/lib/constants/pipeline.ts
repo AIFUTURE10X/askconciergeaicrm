@@ -44,10 +44,51 @@ export const PROPERTY_TYPES = [
 // Lead sources
 export const SOURCES = [
   { id: "cold_outreach", label: "Cold Outreach" },
+  { id: "cold_email", label: "Cold Email" },
   { id: "linkedin", label: "LinkedIn" },
   { id: "inbound", label: "Inbound" },
   { id: "referral", label: "Referral" },
   { id: "facebook", label: "Facebook Group" },
+] as const;
+
+// Property count ranges (for deal qualification)
+export const PROPERTY_COUNT_RANGES = [
+  { id: "1-5", label: "1-5 properties" },
+  { id: "6-20", label: "6-20 properties" },
+  { id: "21-50", label: "21-50 properties" },
+  { id: "50+", label: "50+ properties" },
+] as const;
+
+// Current systems (what they're using now)
+export const CURRENT_SYSTEMS = [
+  { id: "manual", label: "Manual/Paper" },
+  { id: "spreadsheet", label: "Spreadsheets" },
+  { id: "nothing", label: "Nothing" },
+  { id: "competitor", label: "Competitor" },
+  { id: "custom", label: "Custom Solution" },
+  { id: "other", label: "Other" },
+] as const;
+
+// Pain points (why they're talking to us)
+export const PAIN_POINTS = [
+  { id: "guest_calls", label: "Too many guest calls" },
+  { id: "upsells", label: "Want to increase upsells" },
+  { id: "efficiency", label: "Staff efficiency" },
+  { id: "guest_experience", label: "Improve guest experience" },
+  { id: "response_time", label: "Slow response times" },
+  { id: "scaling", label: "Need to scale operations" },
+  { id: "other", label: "Other" },
+] as const;
+
+// Lost reasons (why we lost the deal)
+export const LOST_REASONS = [
+  { id: "price", label: "Price too high" },
+  { id: "feature_missing", label: "Missing feature" },
+  { id: "no_response", label: "No response (Ghosted)" },
+  { id: "competitor", label: "Went with competitor" },
+  { id: "timing", label: "Bad timing" },
+  { id: "budget", label: "No budget" },
+  { id: "other", label: "Other" },
 ] as const;
 
 // Activity types with icons

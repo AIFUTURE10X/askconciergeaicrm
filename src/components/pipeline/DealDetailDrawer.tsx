@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { format } from "date-fns";
+import { format, isToday, isPast, isTomorrow } from "date-fns";
 import {
   Sheet,
   SheetContent,
@@ -19,12 +19,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ActivityLogDialog } from "@/components/activities/ActivityLogDialog";
 import { ActivityTimeline } from "@/components/activities/ActivityTimeline";
 import { EmailComposeDialog } from "@/components/email/EmailComposeDialog";
+import { LostReasonDialog } from "@/components/pipeline/LostReasonDialog";
 import {
   PIPELINE_STAGES,
   getTier,
+  SOURCES,
+  PROPERTY_COUNT_RANGES,
+  CURRENT_SYSTEMS,
+  PAIN_POINTS,
 } from "@/lib/constants/pipeline";
 import {
   User,
@@ -38,6 +45,11 @@ import {
   Plus,
   MessageSquare,
   Mail,
+  AlertTriangle,
+  Clock,
+  Edit2,
+  Save,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Deal, Contact, Activity } from "@/lib/db/schema";
@@ -66,8 +78,14 @@ export function DealDetailDrawer({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [isLostDialogOpen, setIsLostDialogOpen] = useState(false);
   const [activities, setActivities] = useState<ActivityWithRelations[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(false);
+
+  // Next step editing state
+  const [isEditingNextStep, setIsEditingNextStep] = useState(false);
+  const [nextStepText, setNextStepText] = useState("");
+  const [followUpDateText, setFollowUpDateText] = useState("");
 
   // Fetch activities when deal changes
   const fetchActivities = useCallback(async () => {
@@ -89,10 +107,24 @@ export function DealDetailDrawer({
   useEffect(() => {
     if (open && deal) {
       fetchActivities();
+      // Initialize next step form
+      setNextStepText(deal.nextStep || "");
+      setFollowUpDateText(
+        deal.followUpDate
+          ? format(new Date(deal.followUpDate), "yyyy-MM-dd")
+          : ""
+      );
+      setIsEditingNextStep(false);
     }
   }, [open, deal, fetchActivities]);
 
   if (!deal) return null;
+
+  // Follow-up date status
+  const followUpDate = deal.followUpDate ? new Date(deal.followUpDate) : null;
+  const isOverdue = followUpDate && isPast(followUpDate) && !isToday(followUpDate);
+  const isDueToday = followUpDate && isToday(followUpDate);
+  const isDueTomorrow = followUpDate && isTomorrow(followUpDate);
 
   const tier = deal.tier ? getTier(deal.tier) : null;
 
@@ -106,10 +138,29 @@ export function DealDetailDrawer({
   };
 
   const handleQuickAction = async (action: "won" | "lost") => {
+    if (action === "lost") {
+      setIsLostDialogOpen(true);
+      return;
+    }
+
     setIsUpdating(true);
     try {
       await onUpdate(deal.id, {
-        stage: action === "won" ? "closed_won" : "closed_lost",
+        stage: "closed_won",
+      });
+      onOpenChange(false);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleLostConfirm = async (reason: string, notes?: string) => {
+    setIsUpdating(true);
+    try {
+      await onUpdate(deal.id, {
+        stage: "closed_lost",
+        lostReason: reason,
+        notes: notes ? (deal.notes ? `${deal.notes}\n\nLost reason: ${notes}` : `Lost reason: ${notes}`) : deal.notes,
       });
       onOpenChange(false);
     } finally {
@@ -126,6 +177,30 @@ export function DealDetailDrawer({
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleSaveNextStep = async () => {
+    setIsUpdating(true);
+    try {
+      await onUpdate(deal.id, {
+        nextStep: nextStepText || null,
+        followUpDate: followUpDateText ? new Date(followUpDateText) : null,
+      });
+      setIsEditingNextStep(false);
+      toast.success("Next step saved");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleCancelNextStep = () => {
+    setNextStepText(deal.nextStep || "");
+    setFollowUpDateText(
+      deal.followUpDate
+        ? format(new Date(deal.followUpDate), "yyyy-MM-dd")
+        : ""
+    );
+    setIsEditingNextStep(false);
   };
 
   const handleLogActivity = async (data: {
@@ -229,6 +304,116 @@ export function DealDetailDrawer({
               </div>
             )}
 
+            {/* Next Step Section - Most Important! */}
+            {deal.stage !== "closed_won" && deal.stage !== "closed_lost" && (
+              <div className={`p-4 rounded-lg border-2 ${
+                isOverdue
+                  ? "border-red-400 bg-red-50 dark:bg-red-950/30"
+                  : isDueToday
+                  ? "border-orange-400 bg-orange-50 dark:bg-orange-950/30"
+                  : isDueTomorrow
+                  ? "border-yellow-400 bg-yellow-50 dark:bg-yellow-950/30"
+                  : "border-primary/30 bg-primary/5"
+              }`}>
+                <div className="flex items-center justify-between mb-3">
+                  <Label className="text-sm font-semibold flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Next Step
+                  </Label>
+                  {!isEditingNextStep ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsEditingNextStep(true)}
+                      className="h-7 px-2"
+                    >
+                      <Edit2 className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                  ) : (
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleSaveNextStep}
+                        disabled={isUpdating}
+                        className="h-7 px-2 text-green-600 hover:text-green-700"
+                      >
+                        <Save className="h-3 w-3 mr-1" />
+                        Save
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCancelNextStep}
+                        className="h-7 px-2"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {isEditingNextStep ? (
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">
+                        What needs to happen next?
+                      </Label>
+                      <Textarea
+                        value={nextStepText}
+                        onChange={(e) => setNextStepText(e.target.value)}
+                        placeholder="e.g., Follow up on proposal, Schedule demo..."
+                        rows={2}
+                        className="resize-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">
+                        Follow-up Date
+                      </Label>
+                      <Input
+                        type="date"
+                        value={followUpDateText}
+                        onChange={(e) => setFollowUpDateText(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {deal.nextStep ? (
+                      <p className="text-sm font-medium">{deal.nextStep}</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">
+                        No next step defined - click Edit to add one
+                      </p>
+                    )}
+                    {followUpDate && (
+                      <div className={`flex items-center gap-2 text-sm ${
+                        isOverdue
+                          ? "text-red-600 dark:text-red-400 font-semibold"
+                          : isDueToday
+                          ? "text-orange-600 dark:text-orange-400 font-semibold"
+                          : "text-muted-foreground"
+                      }`}>
+                        {isOverdue && <AlertTriangle className="h-4 w-4" />}
+                        <Calendar className="h-4 w-4" />
+                        <span>
+                          {isOverdue
+                            ? `Overdue: ${format(followUpDate, "MMM d, yyyy")}`
+                            : isDueToday
+                            ? "Due Today"
+                            : isDueTomorrow
+                            ? "Due Tomorrow"
+                            : format(followUpDate, "MMM d, yyyy")}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <Separator />
 
             {/* Contact */}
@@ -301,6 +486,50 @@ export function DealDetailDrawer({
                   {format(new Date(deal.expectedCloseDate), "MMMM d, yyyy")}
                 </div>
               </div>
+            )}
+
+            {/* Qualification Info */}
+            {(deal.leadSource || deal.propertyCountRange || deal.currentSystem || deal.painPoint) && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Qualification</Label>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {deal.leadSource && (
+                      <div>
+                        <span className="text-muted-foreground">Source: </span>
+                        <span className="font-medium">
+                          {SOURCES.find((s) => s.id === deal.leadSource)?.label || deal.leadSource}
+                        </span>
+                      </div>
+                    )}
+                    {deal.propertyCountRange && (
+                      <div>
+                        <span className="text-muted-foreground">Properties: </span>
+                        <span className="font-medium">
+                          {PROPERTY_COUNT_RANGES.find((r) => r.id === deal.propertyCountRange)?.label || deal.propertyCountRange}
+                        </span>
+                      </div>
+                    )}
+                    {deal.currentSystem && (
+                      <div>
+                        <span className="text-muted-foreground">Using: </span>
+                        <span className="font-medium">
+                          {CURRENT_SYSTEMS.find((s) => s.id === deal.currentSystem)?.label || deal.currentSystem}
+                        </span>
+                      </div>
+                    )}
+                    {deal.painPoint && (
+                      <div>
+                        <span className="text-muted-foreground">Pain: </span>
+                        <span className="font-medium">
+                          {PAIN_POINTS.find((p) => p.id === deal.painPoint)?.label || deal.painPoint}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
             )}
 
             {deal.notes && (
@@ -394,6 +623,13 @@ export function DealDetailDrawer({
           onEmailSent={handleEmailSent}
         />
       )}
+
+      <LostReasonDialog
+        open={isLostDialogOpen}
+        onOpenChange={setIsLostDialogOpen}
+        dealTitle={deal.title}
+        onConfirm={handleLostConfirm}
+      />
     </>
   );
 }
