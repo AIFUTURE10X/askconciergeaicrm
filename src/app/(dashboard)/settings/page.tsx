@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,12 @@ import { cn } from "@/lib/utils";
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const [isExporting, setIsExporting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleExportAll = async () => {
     setIsExporting(true);
@@ -84,7 +90,7 @@ export default function SettingsPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setTheme("light")}
-                  className={cn(theme === "light" && "border-primary bg-primary/10")}
+                  className={cn(mounted && theme === "light" && "border-primary bg-primary/10")}
                 >
                   <Sun className="h-4 w-4 mr-2" />
                   Light
@@ -93,7 +99,7 @@ export default function SettingsPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setTheme("dark")}
-                  className={cn(theme === "dark" && "border-primary bg-primary/10")}
+                  className={cn(mounted && theme === "dark" && "border-primary bg-primary/10")}
                 >
                   <Moon className="h-4 w-4 mr-2" />
                   Dark
@@ -102,7 +108,7 @@ export default function SettingsPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setTheme("system")}
-                  className={cn(theme === "system" && "border-primary bg-primary/10")}
+                  className={cn(mounted && theme === "system" && "border-primary bg-primary/10")}
                 >
                   <Monitor className="h-4 w-4 mr-2" />
                   System
