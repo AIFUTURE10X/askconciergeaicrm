@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SimpleCRM - Sales Pipeline",
-  description: "Simple CRM for managing your AskConciergeAI sales pipeline",
+  title: "AskConciergeAI CRM",
+  description: "Sales pipeline CRM for AskConciergeAI",
 };
 
 export default function RootLayout({

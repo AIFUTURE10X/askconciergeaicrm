@@ -29,9 +29,9 @@ export function Sidebar() {
         <div className="flex h-16 items-center border-b px-6">
           <Link href="/" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
-              S
+              A
             </div>
-            <span className="text-lg font-semibold">SimpleCRM</span>
+            <span className="text-lg font-semibold">AskConciergeAI CRM</span>
           </Link>
         </div>
 
