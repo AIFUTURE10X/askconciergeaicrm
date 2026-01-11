@@ -188,6 +188,58 @@ export const processedEmails = pgTable(
 );
 
 // ============================================
+// EMAIL DRAFTS (AI-generated responses)
+// ============================================
+export const emailDrafts = pgTable(
+  "email_drafts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    processedEmailId: uuid("processed_email_id").references(
+      () => processedEmails.id,
+      { onDelete: "cascade" }
+    ),
+
+    // Original email context
+    originalFromEmail: varchar("original_from_email", { length: 255 }).notNull(),
+    originalFromName: varchar("original_from_name", { length: 255 }),
+    originalSubject: varchar("original_subject", { length: 500 }),
+    originalBody: text("original_body"),
+    originalReceivedAt: timestamp("original_received_at"),
+    gmailThreadId: varchar("gmail_thread_id", { length: 255 }),
+    gmailMessageId: varchar("gmail_message_id", { length: 255 }),
+
+    // Draft content
+    draftSubject: varchar("draft_subject", { length: 500 }),
+    draftBody: text("draft_body").notNull(),
+    tone: varchar("tone", { length: 50 }).notNull().default("professional"),
+
+    // Status: pending, approved, sent, rejected, failed, generating
+    status: varchar("status", { length: 50 }).notNull().default("pending"),
+
+    // Relations
+    contactId: uuid("contact_id").references(() => contacts.id),
+    dealId: uuid("deal_id").references(() => deals.id),
+
+    // Send tracking
+    sentAt: timestamp("sent_at"),
+    sentGmailMessageId: varchar("sent_gmail_message_id", { length: 255 }),
+
+    // Error tracking
+    errorMessage: text("error_message"),
+
+    // Timestamps
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("email_drafts_status_idx").on(table.status),
+    index("email_drafts_contact_idx").on(table.contactId),
+    index("email_drafts_deal_idx").on(table.dealId),
+    index("email_drafts_created_idx").on(table.createdAt),
+  ]
+);
+
+// ============================================
 // RELATIONS
 // ============================================
 export const contactsRelations = relations(contacts, ({ many }) => ({
@@ -227,6 +279,21 @@ export const remindersRelations = relations(reminders, ({ one }) => ({
   }),
 }));
 
+export const emailDraftsRelations = relations(emailDrafts, ({ one }) => ({
+  processedEmail: one(processedEmails, {
+    fields: [emailDrafts.processedEmailId],
+    references: [processedEmails.id],
+  }),
+  contact: one(contacts, {
+    fields: [emailDrafts.contactId],
+    references: [contacts.id],
+  }),
+  deal: one(deals, {
+    fields: [emailDrafts.dealId],
+    references: [deals.id],
+  }),
+}));
+
 // Type exports
 export type Contact = typeof contacts.$inferSelect;
 export type NewContact = typeof contacts.$inferInsert;
@@ -238,3 +305,5 @@ export type Reminder = typeof reminders.$inferSelect;
 export type NewReminder = typeof reminders.$inferInsert;
 export type Setting = typeof settings.$inferSelect;
 export type ProcessedEmail = typeof processedEmails.$inferSelect;
+export type EmailDraft = typeof emailDrafts.$inferSelect;
+export type NewEmailDraft = typeof emailDrafts.$inferInsert;

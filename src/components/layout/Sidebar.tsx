@@ -8,6 +8,7 @@ import {
   Kanban,
   Users,
   Bell,
+  Inbox,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -18,6 +19,7 @@ import { Button } from "@/components/ui/button";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/inbox", label: "Inbox", icon: Inbox },
   { href: "/pipeline", label: "Pipeline", icon: Kanban },
   { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/reminders", label: "Reminders", icon: Bell },

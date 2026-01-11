@@ -7,7 +7,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { contacts, deals, activities, processedEmails } from "@/lib/db/schema";
+import {
+  contacts,
+  deals,
+  activities,
+  processedEmails,
+  emailDrafts,
+} from "@/lib/db/schema";
 import { eq, ilike } from "drizzle-orm";
 import {
   isGmailConnected,
@@ -15,6 +21,7 @@ import {
   markAsRead,
   addLabel,
 } from "@/lib/gmail/client";
+import { generateEmailDraft } from "@/lib/ai/email-drafter";
 
 // Verify cron secret for Vercel Cron
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -124,13 +131,52 @@ export async function GET(request: NextRequest) {
       });
 
       // Record as processed
-      await db.insert(processedEmails).values({
-        gmailMessageId: email.id,
-        fromEmail: email.fromEmail,
-        subject: email.subject,
-        contactId: contact.id,
-        dealId: deal.id,
-      });
+      const [processedEmail] = await db
+        .insert(processedEmails)
+        .values({
+          gmailMessageId: email.id,
+          fromEmail: email.fromEmail,
+          subject: email.subject,
+          contactId: contact.id,
+          dealId: deal.id,
+        })
+        .returning();
+
+      // Generate AI draft response
+      try {
+        const draftResult = await generateEmailDraft({
+          fromName: email.fromName || email.fromEmail.split("@")[0],
+          fromEmail: email.fromEmail,
+          subject: email.subject || "",
+          body: email.body,
+          contactName: contact.name,
+          companyName: contact.company || undefined,
+          dealTitle: deal.title,
+          dealStage: deal.stage,
+        });
+
+        await db.insert(emailDrafts).values({
+          processedEmailId: processedEmail.id,
+          originalFromEmail: email.fromEmail,
+          originalFromName: email.fromName,
+          originalSubject: email.subject,
+          originalBody: email.body,
+          originalReceivedAt: email.date,
+          gmailThreadId: email.threadId,
+          gmailMessageId: email.id,
+          draftSubject: draftResult.subject,
+          draftBody: draftResult.body,
+          tone: "professional",
+          status: "pending",
+          contactId: contact.id,
+          dealId: deal.id,
+        });
+
+        console.log(`[Gmail Sync] AI draft created for: ${email.subject}`);
+      } catch (aiError) {
+        console.error("[Gmail Sync] AI draft generation failed:", aiError);
+        // Continue processing - don't fail the whole sync for AI errors
+      }
 
       // Mark as read and add label
       await markAsRead(email.id);
