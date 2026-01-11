@@ -1,24 +1,98 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor, Download, Trash2 } from "lucide-react";
+import { Moon, Sun, Monitor, Download, Trash2, Mail, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+// Component to handle Gmail OAuth callback params
+function GmailCallbackHandler({
+  setGmailStatus
+}: {
+  setGmailStatus: (status: { configured: boolean; connected: boolean }) => void
+}) {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const gmailResult = searchParams.get("gmail");
+    const message = searchParams.get("message");
+
+    if (gmailResult === "success") {
+      toast.success("Gmail connected successfully!");
+      window.history.replaceState({}, "", "/settings");
+      setGmailStatus({ configured: true, connected: true });
+    } else if (gmailResult === "error") {
+      toast.error(message ? `Gmail connection failed: ${message}` : "Gmail connection failed");
+      window.history.replaceState({}, "", "/settings");
+    }
+  }, [searchParams, setGmailStatus]);
+
+  return null;
+}
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const [isExporting, setIsExporting] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // Gmail integration state
+  const [gmailStatus, setGmailStatus] = useState<{
+    configured: boolean;
+    connected: boolean;
+  } | null>(null);
+  const [isLoadingGmail, setIsLoadingGmail] = useState(true);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+
   // Avoid hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Fetch Gmail status on mount
+  useEffect(() => {
+    async function fetchGmailStatus() {
+      try {
+        const res = await fetch("/api/gmail/status");
+        const data = await res.json();
+        setGmailStatus(data);
+      } catch {
+        setGmailStatus({ configured: false, connected: false });
+      } finally {
+        setIsLoadingGmail(false);
+      }
+    }
+    fetchGmailStatus();
+  }, []);
+
+  const handleConnectGmail = () => {
+    window.location.href = "/api/gmail/authorize";
+  };
+
+  const handleDisconnectGmail = async () => {
+    if (!confirm("Are you sure you want to disconnect Gmail? Email sync will stop.")) {
+      return;
+    }
+    setIsDisconnecting(true);
+    try {
+      const res = await fetch("/api/gmail/disconnect", { method: "POST" });
+      if (res.ok) {
+        setGmailStatus({ configured: gmailStatus?.configured ?? false, connected: false });
+        toast.success("Gmail disconnected successfully");
+      } else {
+        toast.error("Failed to disconnect Gmail");
+      }
+    } catch {
+      toast.error("Failed to disconnect Gmail");
+    } finally {
+      setIsDisconnecting(false);
+    }
+  };
 
   const handleExportAll = async () => {
     setIsExporting(true);
@@ -70,6 +144,11 @@ export default function SettingsPage() {
 
   return (
     <>
+      {/* Handle Gmail OAuth callback params */}
+      <Suspense fallback={null}>
+        <GmailCallbackHandler setGmailStatus={setGmailStatus} />
+      </Suspense>
+
       <Header
         title="Settings"
         description="Manage your CRM preferences"
@@ -115,6 +194,80 @@ export default function SettingsPage() {
                 </Button>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Gmail Integration */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Gmail Integration
+            </CardTitle>
+            <CardDescription>
+              Automatically sync incoming emails as leads
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isLoadingGmail ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Checking Gmail status...
+              </div>
+            ) : !gmailStatus?.configured ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
+                  <XCircle className="h-4 w-4" />
+                  <span className="text-sm font-medium">Gmail not configured</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  To enable Gmail integration, add the following environment variables:
+                </p>
+                <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
+                  <li><code>GMAIL_CLIENT_ID</code> - Google OAuth client ID</li>
+                  <li><code>GMAIL_CLIENT_SECRET</code> - Google OAuth client secret</li>
+                  <li><code>GMAIL_REDIRECT_URI</code> - OAuth redirect URL</li>
+                </ul>
+              </div>
+            ) : gmailStatus.connected ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-500">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span className="text-sm font-medium">Gmail connected</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDisconnectGmail}
+                    disabled={isDisconnecting}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    {isDisconnecting ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : null}
+                    Disconnect
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Emails are synced every 5 minutes. New emails create leads automatically.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <XCircle className="h-4 w-4" />
+                  <span className="text-sm">Gmail not connected</span>
+                </div>
+                <Button onClick={handleConnectGmail}>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Connect Gmail
+                </Button>
+                <p className="text-sm text-muted-foreground">
+                  Connect your Gmail to automatically import business inquiries as leads.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

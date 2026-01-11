@@ -158,6 +158,36 @@ export const reminders = pgTable(
 );
 
 // ============================================
+// SETTINGS (App Configuration)
+// ============================================
+export const settings = pgTable("settings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  key: varchar("key", { length: 100 }).notNull().unique(),
+  value: text("value"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ============================================
+// PROCESSED EMAILS (Track synced emails)
+// ============================================
+export const processedEmails = pgTable(
+  "processed_emails",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    gmailMessageId: varchar("gmail_message_id", { length: 255 }).notNull().unique(),
+    fromEmail: varchar("from_email", { length: 255 }),
+    subject: varchar("subject", { length: 500 }),
+    processedAt: timestamp("processed_at").defaultNow().notNull(),
+    contactId: uuid("contact_id").references(() => contacts.id),
+    dealId: uuid("deal_id").references(() => deals.id),
+  },
+  (table) => [
+    index("processed_emails_gmail_id_idx").on(table.gmailMessageId),
+    index("processed_emails_from_idx").on(table.fromEmail),
+  ]
+);
+
+// ============================================
 // RELATIONS
 // ============================================
 export const contactsRelations = relations(contacts, ({ many }) => ({
@@ -206,3 +236,5 @@ export type Activity = typeof activities.$inferSelect;
 export type NewActivity = typeof activities.$inferInsert;
 export type Reminder = typeof reminders.$inferSelect;
 export type NewReminder = typeof reminders.$inferInsert;
+export type Setting = typeof settings.$inferSelect;
+export type ProcessedEmail = typeof processedEmails.$inferSelect;
