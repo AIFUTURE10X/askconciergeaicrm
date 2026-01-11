@@ -26,12 +26,12 @@ export function Sidebar() {
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r bg-background">
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <div className="flex h-16 items-center border-b px-6">
+        <div className="flex h-16 items-center border-b px-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold flex-shrink-0">
               A
             </div>
-            <span className="text-lg font-semibold">AskConciergeAI CRM</span>
+            <span className="text-sm font-semibold whitespace-nowrap">AskConciergeAI CRM</span>
           </Link>
         </div>
 
