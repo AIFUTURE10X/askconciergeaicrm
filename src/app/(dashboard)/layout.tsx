@@ -1,4 +1,23 @@
+"use client";
+
 import { Sidebar } from "@/components/layout/Sidebar";
+import { SidebarProvider, useSidebar } from "@/components/layout/SidebarContext";
+import { cn } from "@/lib/utils";
+
+function DashboardContent({ children }: { children: React.ReactNode }) {
+  const { isCollapsed } = useSidebar();
+
+  return (
+    <main
+      className={cn(
+        "transition-all duration-300",
+        isCollapsed ? "pl-16" : "pl-64"
+      )}
+    >
+      {children}
+    </main>
+  );
+}
 
 export default function DashboardLayout({
   children,
@@ -6,9 +25,11 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-muted/30">
-      <Sidebar />
-      <main className="pl-64">{children}</main>
-    </div>
+    <SidebarProvider>
+      <div className="min-h-screen bg-muted/30">
+        <Sidebar />
+        <DashboardContent>{children}</DashboardContent>
+      </div>
+    </SidebarProvider>
   );
 }
