@@ -36,7 +36,7 @@ export function Sidebar() {
     >
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <div className="flex h-16 items-center border-b px-4">
+        <div className="flex h-16 items-center justify-between border-b px-4">
           <Link href="/" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold flex-shrink-0">
               A
@@ -47,6 +47,18 @@ export function Sidebar() {
               </span>
             )}
           </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggle}
+            className="h-8 w-8 flex-shrink-0"
+          >
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </Button>
         </div>
 
         {/* Navigation */}
@@ -77,7 +89,7 @@ export function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="border-t p-2 space-y-2">
+        <div className="border-t p-2">
           <div
             className={cn(
               "flex items-center",
@@ -97,23 +109,6 @@ export function Sidebar() {
             </Link>
             <ThemeToggle />
           </div>
-
-          {/* Collapse Toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggle}
-            className={cn("w-full", isCollapsed && "px-2")}
-          >
-            {isCollapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <>
-                <ChevronLeft className="h-4 w-4 mr-2" />
-                Collapse
-              </>
-            )}
-          </Button>
         </div>
       </div>
     </aside>
