@@ -1,14 +1,12 @@
 /**
  * AI Email Drafter
  *
- * Uses Claude Haiku to generate contextual email draft responses.
+ * Uses Gemini 2.5 Flash to generate contextual email draft responses.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export type DraftTone = "professional" | "friendly" | "concise" | "follow_up";
 
@@ -42,6 +40,8 @@ export async function generateEmailDraft(
   context: DraftContext,
   tone: DraftTone = "professional"
 ): Promise<GeneratedDraft> {
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
   const systemPrompt = `You are an AI assistant helping draft email responses for a sales CRM. Your job is to draft professional, helpful responses to incoming business inquiries.
 
 Guidelines:
@@ -77,22 +77,21 @@ Format your response as JSON with this exact structure:
 
 Only output the JSON, nothing else.`;
 
-  const response = await anthropic.messages.create({
-    model: "claude-3-haiku-20240307",
-    max_tokens: 1024,
-    messages: [{ role: "user", content: userPrompt }],
-    system: systemPrompt,
+  const result = await model.generateContent({
+    contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+    systemInstruction: systemPrompt,
   });
 
-  // Parse response
-  const content = response.content[0];
-  if (content.type !== "text") {
-    throw new Error("Unexpected response type from AI");
-  }
+  const response = result.response;
+  const text = response.text();
 
   try {
-    // Try to parse as JSON
-    const parsed = JSON.parse(content.text);
+    // Clean up response - remove markdown code blocks if present
+    const cleanedText = text
+      .replace(/```json\n?/g, "")
+      .replace(/```\n?/g, "")
+      .trim();
+    const parsed = JSON.parse(cleanedText);
     return {
       subject: parsed.subject || `Re: ${context.subject}`,
       body: parsed.body,
@@ -101,7 +100,7 @@ Only output the JSON, nothing else.`;
     // Fallback: treat entire response as body
     return {
       subject: `Re: ${context.subject}`,
-      body: content.text,
+      body: text,
     };
   }
 }
@@ -112,6 +111,8 @@ export async function regenerateDraft(
   previousDraft: string,
   feedback?: string
 ): Promise<GeneratedDraft> {
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
   const systemPrompt = `You are an AI assistant helping regenerate email drafts for a sales CRM.
 
 Tone: ${TONE_INSTRUCTIONS[tone]}
@@ -132,20 +133,20 @@ Generate a new, improved draft response as JSON:
 
 Only output the JSON, nothing else.`;
 
-  const response = await anthropic.messages.create({
-    model: "claude-3-haiku-20240307",
-    max_tokens: 1024,
-    messages: [{ role: "user", content: userPrompt }],
-    system: systemPrompt,
+  const result = await model.generateContent({
+    contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+    systemInstruction: systemPrompt,
   });
 
-  const content = response.content[0];
-  if (content.type !== "text") {
-    throw new Error("Unexpected response type from AI");
-  }
+  const response = result.response;
+  const text = response.text();
 
   try {
-    const parsed = JSON.parse(content.text);
+    const cleanedText = text
+      .replace(/```json\n?/g, "")
+      .replace(/```\n?/g, "")
+      .trim();
+    const parsed = JSON.parse(cleanedText);
     return {
       subject: parsed.subject || `Re: ${context.subject}`,
       body: parsed.body,
@@ -153,7 +154,7 @@ Only output the JSON, nothing else.`;
   } catch {
     return {
       subject: `Re: ${context.subject}`,
-      body: content.text,
+      body: text,
     };
   }
 }
