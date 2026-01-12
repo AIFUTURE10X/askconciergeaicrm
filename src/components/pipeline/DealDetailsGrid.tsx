@@ -1,7 +1,13 @@
+"use client";
+
+import { useState } from "react";
 import { format } from "date-fns";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, DollarSign, Building2 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar, DollarSign, Building2, Pencil, Check, X } from "lucide-react";
 import {
   getTier,
   SOURCES,
@@ -13,12 +19,33 @@ import type { Deal } from "@/lib/db/schema";
 
 interface DealDetailsGridProps {
   deal: Deal;
+  onProbabilityChange?: (probability: number) => Promise<void>;
 }
 
-export function DealDetailsGrid({ deal }: DealDetailsGridProps) {
+export function DealDetailsGrid({ deal, onProbabilityChange }: DealDetailsGridProps) {
+  const [isEditingProbability, setIsEditingProbability] = useState(false);
+  const [probabilityValue, setProbabilityValue] = useState(deal.probability || 0);
+  const [isSaving, setIsSaving] = useState(false);
+
   const tier = deal.tier ? getTier(deal.tier) : null;
   const hasQualification =
     deal.leadSource || deal.propertyCountRange || deal.currentSystem || deal.painPoint;
+
+  const handleSaveProbability = async () => {
+    if (!onProbabilityChange) return;
+    setIsSaving(true);
+    try {
+      await onProbabilityChange(probabilityValue);
+      setIsEditingProbability(false);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelProbability = () => {
+    setProbabilityValue(deal.probability || 0);
+    setIsEditingProbability(false);
+  };
 
   return (
     <>
@@ -46,7 +73,50 @@ export function DealDetailsGrid({ deal }: DealDetailsGridProps) {
         </div>
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">Probability</Label>
-          <div className="font-semibold">{deal.probability}%</div>
+          {onProbabilityChange ? (
+            <Popover open={isEditingProbability} onOpenChange={setIsEditingProbability}>
+              <PopoverTrigger asChild>
+                <button className="font-semibold flex items-center gap-1 hover:text-primary transition-colors group">
+                  {deal.probability}%
+                  <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64" align="start">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Probability</Label>
+                    <span className="text-lg font-bold">{probabilityValue}%</span>
+                  </div>
+                  <Slider
+                    value={[probabilityValue]}
+                    onValueChange={([value]) => setProbabilityValue(value)}
+                    max={100}
+                    step={5}
+                    className="w-full"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCancelProbability}
+                      disabled={isSaving}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveProbability}
+                      disabled={isSaving}
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <div className="font-semibold">{deal.probability}%</div>
+          )}
         </div>
       </div>
 

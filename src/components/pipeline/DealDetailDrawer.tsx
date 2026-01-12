@@ -239,7 +239,12 @@ export function DealDetailDrawer({
               />
             )}
 
-            <DealDetailsGrid deal={deal} />
+            <DealDetailsGrid
+              deal={deal}
+              onProbabilityChange={async (probability) => {
+                await onUpdate(deal.id, { probability });
+              }}
+            />
 
             <Separator />
 
