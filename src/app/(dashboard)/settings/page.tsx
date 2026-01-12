@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor, Download, Trash2, Mail, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Moon, Sun, Monitor, Download, Trash2, Mail, CheckCircle2, XCircle, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +48,7 @@ export default function SettingsPage() {
   } | null>(null);
   const [isLoadingGmail, setIsLoadingGmail] = useState(true);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Avoid hydration mismatch
   useEffect(() => {
@@ -91,6 +92,30 @@ export default function SettingsPage() {
       toast.error("Failed to disconnect Gmail");
     } finally {
       setIsDisconnecting(false);
+    }
+  };
+
+  const handleSyncNow = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/gmail/sync", { method: "POST" });
+      const data = await res.json();
+
+      if (data.success) {
+        if (data.processed > 0) {
+          toast.success(`Synced ${data.processed} new email(s)`);
+        } else {
+          toast.info("No new emails to sync");
+        }
+      } else if (data.message === "Gmail not connected") {
+        toast.error("Gmail is not connected");
+      } else {
+        toast.error(data.error || "Sync failed");
+      }
+    } catch {
+      toast.error("Failed to sync emails");
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -236,21 +261,36 @@ export default function SettingsPage() {
                     <CheckCircle2 className="h-4 w-4" />
                     <span className="text-sm font-medium">Gmail connected</span>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDisconnectGmail}
-                    disabled={isDisconnecting}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    {isDisconnecting ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : null}
-                    Disconnect
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSyncNow}
+                      disabled={isSyncing}
+                    >
+                      {isSyncing ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                      )}
+                      Sync Now
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDisconnectGmail}
+                      disabled={isDisconnecting}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      {isDisconnecting ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      Disconnect
+                    </Button>
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Emails are synced every 5 minutes. New emails create leads automatically.
+                  Emails are synced every 5 minutes. Click &quot;Sync Now&quot; to manually check for new emails.
                 </p>
               </div>
             ) : (
