@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AddReminderDialog } from "./AddReminderDialog";
+import { EditReminderDialog } from "./EditReminderDialog";
 import { ReminderCard } from "./ReminderCard";
 import { RemindersEmptyState } from "./RemindersEmptyState";
 import type { Reminder, Deal, Contact } from "@/lib/db/schema";
@@ -22,6 +23,8 @@ export default function RemindersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showCompleted, setShowCompleted] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedReminder, setSelectedReminder] = useState<ReminderWithRelations | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -111,6 +114,35 @@ export default function RemindersPage() {
     toast.success("Reminder created");
   };
 
+  const handleUpdate = async (id: string, data: {
+    title: string;
+    description?: string;
+    dueAt: string;
+    priority: string;
+    dealId?: string;
+  }) => {
+    const res = await fetch(`/api/reminders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    if (!res.ok) throw new Error("Failed to update reminder");
+
+    const { reminder } = await res.json();
+    setReminders((prev) =>
+      prev
+        .map((r) => (r.id === id ? { ...r, ...reminder } : r))
+        .sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime())
+    );
+    toast.success("Reminder updated");
+  };
+
+  const handleReminderClick = (reminder: ReminderWithRelations) => {
+    setSelectedReminder(reminder);
+    setIsEditDialogOpen(true);
+  };
+
   const getDateLabel = (date: Date) => {
     if (isToday(date)) return "Today";
     if (isTomorrow(date)) return "Tomorrow";
@@ -190,6 +222,7 @@ export default function RemindersPage() {
                         reminder={reminder}
                         onComplete={handleComplete}
                         onDelete={handleDelete}
+                        onClick={handleReminderClick}
                       />
                     ))}
                   </div>
@@ -205,6 +238,14 @@ export default function RemindersPage() {
         onOpenChange={setIsAddDialogOpen}
         deals={deals}
         onSubmit={handleSubmit}
+      />
+
+      <EditReminderDialog
+        reminder={selectedReminder}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        deals={deals}
+        onSave={handleUpdate}
       />
     </>
   );

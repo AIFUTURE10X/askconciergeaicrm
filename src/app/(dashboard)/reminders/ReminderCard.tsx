@@ -17,6 +17,7 @@ interface ReminderCardProps {
   reminder: ReminderWithRelations;
   onComplete: (id: string) => void;
   onDelete: (id: string) => void;
+  onClick: (reminder: ReminderWithRelations) => void;
 }
 
 function getPriorityColor(priority: string) {
@@ -24,9 +25,12 @@ function getPriorityColor(priority: string) {
   return p?.color || "bg-gray-100 text-gray-700";
 }
 
-export function ReminderCard({ reminder, onComplete, onDelete }: ReminderCardProps) {
+export function ReminderCard({ reminder, onComplete, onDelete, onClick }: ReminderCardProps) {
   return (
-    <Card className={reminder.isCompleted ? "opacity-60" : ""}>
+    <Card
+      className={`cursor-pointer hover:bg-muted/50 transition-colors ${reminder.isCompleted ? "opacity-60" : ""}`}
+      onClick={() => onClick(reminder)}
+    >
       <CardContent className="p-2">
         <div className="flex items-start gap-2">
           <Button
@@ -37,7 +41,10 @@ export function ReminderCard({ reminder, onComplete, onDelete }: ReminderCardPro
                 ? "text-green-600"
                 : "text-muted-foreground hover:text-green-600"
             }`}
-            onClick={() => !reminder.isCompleted && onComplete(reminder.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!reminder.isCompleted) onComplete(reminder.id);
+            }}
             disabled={reminder.isCompleted ?? false}
           >
             <CheckCircle className="h-4 w-4" />
@@ -63,7 +70,10 @@ export function ReminderCard({ reminder, onComplete, onDelete }: ReminderCardPro
             variant="ghost"
             size="icon"
             className="h-5 w-5 flex-shrink-0 text-muted-foreground hover:text-destructive"
-            onClick={() => onDelete(reminder.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(reminder.id);
+            }}
           >
             <Trash2 className="h-3 w-3" />
           </Button>
