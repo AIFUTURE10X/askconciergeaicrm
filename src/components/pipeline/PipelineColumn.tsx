@@ -16,6 +16,7 @@ interface PipelineColumnProps {
   selectedDeals?: Set<string>;
   onSelectDeal?: (dealId: string, selected: boolean) => void;
   selectionMode?: boolean;
+  compact?: boolean;
 }
 
 export function PipelineColumn({
@@ -24,14 +25,18 @@ export function PipelineColumn({
   onDealClick,
   selectedDeals,
   onSelectDeal,
-  selectionMode
+  selectionMode,
+  compact
 }: PipelineColumnProps) {
   const totalValue = deals.reduce((sum, deal) => {
     return sum + (deal.value ? parseFloat(deal.value) : 0);
   }, 0);
 
   return (
-    <div className="flex flex-col w-72 min-w-72 bg-muted/50 rounded-lg">
+    <div className={cn(
+      "flex flex-col bg-muted/50 rounded-lg",
+      compact ? "w-56 min-w-56" : "w-72 min-w-72"
+    )}>
       {/* Column Header */}
       <div className={cn("px-3 py-2 rounded-t-lg border-b", stage.color)}>
         <div className="flex items-center justify-between">
@@ -76,6 +81,7 @@ export function PipelineColumn({
                       isSelected={selectedDeals?.has(deal.id)}
                       onSelectChange={(selected) => onSelectDeal?.(deal.id, selected)}
                       selectionMode={selectionMode}
+                      compact={compact}
                     />
                   </div>
                 )}

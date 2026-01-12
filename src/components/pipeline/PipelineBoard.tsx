@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { PipelineColumn } from "./PipelineColumn";
-import { PipelineListView } from "./PipelineListView";
 import { DealDetailDrawer } from "./DealDetailDrawer";
 import { AddDealDialog } from "./AddDealDialog";
 import { Header } from "@/components/layout/Header";
@@ -279,31 +278,22 @@ export function PipelineBoard() {
       </div>
 
       <div className="p-6 pt-4">
-        {viewMode === "board" ? (
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <div className="flex gap-4 overflow-x-auto pb-4">
-              {ACTIVE_STAGES.map((stage) => (
-                <PipelineColumn
-                  key={stage.id}
-                  stage={stage}
-                  deals={dealsByStage[stage.id] || []}
-                  onDealClick={handleDealClick}
-                  selectedDeals={selectedDeals}
-                  onSelectDeal={handleSelectDeal}
-                  selectionMode={selectionMode}
-                />
-              ))}
-            </div>
-          </DragDropContext>
-        ) : (
-          <PipelineListView
-            deals={activeDeals}
-            onDealClick={handleDealClick}
-            selectedDeals={selectedDeals}
-            onSelectDeal={handleSelectDeal}
-            selectionMode={selectionMode}
-          />
-        )}
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {ACTIVE_STAGES.map((stage) => (
+              <PipelineColumn
+                key={stage.id}
+                stage={stage}
+                deals={dealsByStage[stage.id] || []}
+                onDealClick={handleDealClick}
+                selectedDeals={selectedDeals}
+                onSelectDeal={handleSelectDeal}
+                selectionMode={selectionMode}
+                compact={viewMode === "list"}
+              />
+            ))}
+          </div>
+        </DragDropContext>
       </div>
 
       <AddDealDialog
