@@ -11,9 +11,17 @@ export const PIPELINE_STAGES = [
 
 export type StageId = (typeof PIPELINE_STAGES)[number]["id"];
 
-// Active stages (shown in Kanban)
+// Active stages (shown in Kanban) - excludes closed stages
 export const ACTIVE_STAGES = PIPELINE_STAGES.filter(
   (s) => s.id !== "closed_won" && s.id !== "closed_lost"
+);
+
+// All stages including closed (for full Kanban view)
+export const ALL_KANBAN_STAGES = PIPELINE_STAGES;
+
+// Closed stages only
+export const CLOSED_STAGES = PIPELINE_STAGES.filter(
+  (s) => s.id === "closed_won" || s.id === "closed_lost"
 );
 
 // AskConciergeAI pricing tiers
