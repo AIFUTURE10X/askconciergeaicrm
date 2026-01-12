@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { exchangeCodeForTokens, saveTokens } from "@/lib/gmail/client";
+import { exchangeCodeForTokens, upsertGmailAccount } from "@/lib/gmail/client";
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
@@ -18,11 +18,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const tokens = await exchangeCodeForTokens(code);
-    await saveTokens(tokens);
+    // Exchange code for tokens and get user email
+    const { tokens, email } = await exchangeCodeForTokens(code);
+
+    // Save or update the Gmail account
+    await upsertGmailAccount(email, tokens);
 
     return NextResponse.redirect(
-      new URL("/settings?gmail=success", request.url)
+      new URL(`/settings?gmail=success&email=${encodeURIComponent(email)}`, request.url)
     );
   } catch (err) {
     console.error("Gmail OAuth error:", err);

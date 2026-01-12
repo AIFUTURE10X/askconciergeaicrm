@@ -1,9 +1,19 @@
-import { NextResponse } from "next/server";
-import { disconnectGmail } from "@/lib/gmail/client";
+import { NextRequest, NextResponse } from "next/server";
+import { disconnectGmail, disconnectGmailAccount } from "@/lib/gmail/client";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    await disconnectGmail();
+    const body = await request.json().catch(() => ({}));
+    const { accountId } = body;
+
+    if (accountId) {
+      // Disconnect specific account
+      await disconnectGmailAccount(accountId);
+    } else {
+      // Disconnect all accounts (legacy behavior)
+      await disconnectGmail();
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Gmail disconnect error:", error);

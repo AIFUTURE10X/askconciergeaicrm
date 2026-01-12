@@ -7,31 +7,47 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor, Download, Trash2, Mail, CheckCircle2, XCircle, Loader2, RefreshCw } from "lucide-react";
+import { Moon, Sun, Monitor, Download, Trash2, Mail, CheckCircle2, XCircle, Loader2, RefreshCw, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
+
+interface GmailAccount {
+  id: string;
+  email: string;
+  name: string | null;
+  lastSyncAt: string | null;
+  createdAt: string;
+}
+
+interface GmailStatus {
+  configured: boolean;
+  connected: boolean;
+  accounts: GmailAccount[];
+}
 
 // Component to handle Gmail OAuth callback params
 function GmailCallbackHandler({
-  setGmailStatus
+  onSuccess
 }: {
-  setGmailStatus: (status: { configured: boolean; connected: boolean }) => void
+  onSuccess: () => void
 }) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
     const gmailResult = searchParams.get("gmail");
+    const email = searchParams.get("email");
     const message = searchParams.get("message");
 
     if (gmailResult === "success") {
-      toast.success("Gmail connected successfully!");
+      toast.success(email ? `Gmail account ${email} connected!` : "Gmail connected successfully!");
       window.history.replaceState({}, "", "/settings");
-      setGmailStatus({ configured: true, connected: true });
+      onSuccess();
     } else if (gmailResult === "error") {
       toast.error(message ? `Gmail connection failed: ${message}` : "Gmail connection failed");
       window.history.replaceState({}, "", "/settings");
     }
-  }, [searchParams, setGmailStatus]);
+  }, [searchParams, onSuccess]);
 
   return null;
 }
@@ -42,12 +58,9 @@ export default function SettingsPage() {
   const [mounted, setMounted] = useState(false);
 
   // Gmail integration state
-  const [gmailStatus, setGmailStatus] = useState<{
-    configured: boolean;
-    connected: boolean;
-  } | null>(null);
+  const [gmailStatus, setGmailStatus] = useState<GmailStatus | null>(null);
   const [isLoadingGmail, setIsLoadingGmail] = useState(true);
-  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Avoid hydration mismatch
@@ -56,18 +69,19 @@ export default function SettingsPage() {
   }, []);
 
   // Fetch Gmail status on mount
-  useEffect(() => {
-    async function fetchGmailStatus() {
-      try {
-        const res = await fetch("/api/gmail/status");
-        const data = await res.json();
-        setGmailStatus(data);
-      } catch {
-        setGmailStatus({ configured: false, connected: false });
-      } finally {
-        setIsLoadingGmail(false);
-      }
+  const fetchGmailStatus = async () => {
+    try {
+      const res = await fetch("/api/gmail/status");
+      const data = await res.json();
+      setGmailStatus(data);
+    } catch {
+      setGmailStatus({ configured: false, connected: false, accounts: [] });
+    } finally {
+      setIsLoadingGmail(false);
     }
+  };
+
+  useEffect(() => {
     fetchGmailStatus();
   }, []);
 
@@ -75,23 +89,35 @@ export default function SettingsPage() {
     window.location.href = "/api/gmail/authorize";
   };
 
-  const handleDisconnectGmail = async () => {
-    if (!confirm("Are you sure you want to disconnect Gmail? Email sync will stop.")) {
+  const handleDisconnectGmail = async (accountId: string, email: string) => {
+    if (!confirm(`Are you sure you want to disconnect ${email}? Email sync will stop for this account.`)) {
       return;
     }
-    setIsDisconnecting(true);
+    setDisconnectingId(accountId);
     try {
-      const res = await fetch("/api/gmail/disconnect", { method: "POST" });
+      const res = await fetch("/api/gmail/disconnect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountId }),
+      });
       if (res.ok) {
-        setGmailStatus({ configured: gmailStatus?.configured ?? false, connected: false });
-        toast.success("Gmail disconnected successfully");
+        setGmailStatus((prev) =>
+          prev
+            ? {
+                ...prev,
+                accounts: prev.accounts.filter((a) => a.id !== accountId),
+                connected: prev.accounts.length > 1,
+              }
+            : prev
+        );
+        toast.success(`${email} disconnected successfully`);
       } else {
         toast.error("Failed to disconnect Gmail");
       }
     } catch {
       toast.error("Failed to disconnect Gmail");
     } finally {
-      setIsDisconnecting(false);
+      setDisconnectingId(null);
     }
   };
 
@@ -103,10 +129,12 @@ export default function SettingsPage() {
 
       if (data.success) {
         if (data.processed > 0) {
-          toast.success(`Synced ${data.processed} new email(s)`);
+          toast.success(`Synced ${data.processed} new email(s) from ${data.accounts?.length || 1} account(s)`);
         } else {
           toast.info("No new emails to sync");
         }
+        // Refresh status to update last sync times
+        fetchGmailStatus();
       } else if (data.message === "Gmail not connected") {
         toast.error("Gmail is not connected");
       } else {
@@ -171,7 +199,7 @@ export default function SettingsPage() {
     <>
       {/* Handle Gmail OAuth callback params */}
       <Suspense fallback={null}>
-        <GmailCallbackHandler setGmailStatus={setGmailStatus} />
+        <GmailCallbackHandler onSuccess={fetchGmailStatus} />
       </Suspense>
 
       <Header
@@ -230,7 +258,7 @@ export default function SettingsPage() {
               Gmail Integration
             </CardTitle>
             <CardDescription>
-              Automatically sync incoming emails as leads
+              Connect multiple Gmail accounts to sync emails as leads
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -254,58 +282,80 @@ export default function SettingsPage() {
                   <li><code>GMAIL_REDIRECT_URI</code> - OAuth redirect URL</li>
                 </ul>
               </div>
-            ) : gmailStatus.connected ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-green-600 dark:text-green-500">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span className="text-sm font-medium">Gmail connected</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSyncNow}
-                      disabled={isSyncing}
-                    >
-                      {isSyncing ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                      )}
-                      Sync Now
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDisconnectGmail}
-                      disabled={isDisconnecting}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      {isDisconnecting ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : null}
-                      Disconnect
-                    </Button>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Emails are synced every 5 minutes. Click &quot;Sync Now&quot; to manually check for new emails.
-                </p>
-              </div>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <XCircle className="h-4 w-4" />
-                  <span className="text-sm">Gmail not connected</span>
+                {/* Connected Accounts */}
+                {gmailStatus.accounts.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Connected Accounts</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSyncNow}
+                        disabled={isSyncing}
+                      >
+                        {isSyncing ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                        )}
+                        Sync All
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {gmailStatus.accounts.map((account) => (
+                        <div
+                          key={account.id}
+                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
+                            <div>
+                              <div className="text-sm font-medium">
+                                {account.name || account.email}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {account.email}
+                                {account.lastSyncAt && (
+                                  <span className="ml-2">
+                                    • Last sync: {formatDistanceToNow(new Date(account.lastSyncAt), { addSuffix: true })}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDisconnectGmail(account.id, account.email)}
+                            disabled={disconnectingId === account.id}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            {disconnectingId === account.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add Account Button */}
+                <div className="pt-2">
+                  <Button onClick={handleConnectGmail} variant="outline">
+                    <Plus className="h-4 w-4 mr-2" />
+                    {gmailStatus.accounts.length > 0 ? "Add Another Account" : "Connect Gmail Account"}
+                  </Button>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {gmailStatus.accounts.length > 0
+                      ? "Connect additional Gmail accounts to sync emails from multiple businesses."
+                      : "Connect your Gmail to automatically import business inquiries as leads."}
+                  </p>
                 </div>
-                <Button onClick={handleConnectGmail}>
-                  <Mail className="h-4 w-4 mr-2" />
-                  Connect Gmail
-                </Button>
-                <p className="text-sm text-muted-foreground">
-                  Connect your Gmail to automatically import business inquiries as leads.
-                </p>
               </div>
             )}
           </CardContent>

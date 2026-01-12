@@ -81,6 +81,12 @@ export const deals = pgTable(
 
     notes: text("notes"),
     sortOrder: integer("sort_order").default(0),
+
+    // Source Gmail account (for multi-business support)
+    gmailAccountId: uuid("gmail_account_id").references(() => gmailAccounts.id, {
+      onDelete: "set null",
+    }),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -90,6 +96,7 @@ export const deals = pgTable(
     index("deals_expected_close_idx").on(table.expectedCloseDate),
     index("deals_follow_up_idx").on(table.followUpDate),
     index("deals_created_idx").on(table.createdAt),
+    index("deals_gmail_account_idx").on(table.gmailAccountId),
   ]
 );
 
@@ -168,12 +175,39 @@ export const settings = pgTable("settings", {
 });
 
 // ============================================
+// GMAIL ACCOUNTS (Multi-account support)
+// ============================================
+export const gmailAccounts = pgTable(
+  "gmail_accounts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: varchar("email", { length: 255 }).notNull().unique(),
+    name: varchar("name", { length: 255 }), // Display name / business name
+    accessToken: text("access_token").notNull(),
+    refreshToken: text("refresh_token").notNull(),
+    expiryDate: timestamp("expiry_date").notNull(),
+    labelFilter: varchar("label_filter", { length: 100 }), // Optional: only sync emails with this label
+    isActive: boolean("is_active").default(true),
+    lastSyncAt: timestamp("last_sync_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("gmail_accounts_email_idx").on(table.email),
+    index("gmail_accounts_active_idx").on(table.isActive),
+  ]
+);
+
+// ============================================
 // PROCESSED EMAILS (Track synced emails)
 // ============================================
 export const processedEmails = pgTable(
   "processed_emails",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    gmailAccountId: uuid("gmail_account_id").references(() => gmailAccounts.id, {
+      onDelete: "set null",
+    }),
     gmailMessageId: varchar("gmail_message_id", { length: 255 }).notNull().unique(),
     fromEmail: varchar("from_email", { length: 255 }),
     subject: varchar("subject", { length: 500 }),
@@ -184,6 +218,7 @@ export const processedEmails = pgTable(
   (table) => [
     index("processed_emails_gmail_id_idx").on(table.gmailMessageId),
     index("processed_emails_from_idx").on(table.fromEmail),
+    index("processed_emails_account_idx").on(table.gmailAccountId),
   ]
 );
 
@@ -198,6 +233,9 @@ export const emailDrafts = pgTable(
       () => processedEmails.id,
       { onDelete: "cascade" }
     ),
+    gmailAccountId: uuid("gmail_account_id").references(() => gmailAccounts.id, {
+      onDelete: "set null",
+    }),
 
     // Original email context
     originalFromEmail: varchar("original_from_email", { length: 255 }).notNull(),
@@ -253,6 +291,10 @@ export const dealsRelations = relations(deals, ({ one, many }) => ({
     fields: [deals.contactId],
     references: [contacts.id],
   }),
+  gmailAccount: one(gmailAccounts, {
+    fields: [deals.gmailAccountId],
+    references: [gmailAccounts.id],
+  }),
   activities: many(activities),
   reminders: many(reminders),
 }));
@@ -279,10 +321,35 @@ export const remindersRelations = relations(reminders, ({ one }) => ({
   }),
 }));
 
+export const gmailAccountsRelations = relations(gmailAccounts, ({ many }) => ({
+  deals: many(deals),
+  processedEmails: many(processedEmails),
+  emailDrafts: many(emailDrafts),
+}));
+
+export const processedEmailsRelations = relations(processedEmails, ({ one }) => ({
+  gmailAccount: one(gmailAccounts, {
+    fields: [processedEmails.gmailAccountId],
+    references: [gmailAccounts.id],
+  }),
+  contact: one(contacts, {
+    fields: [processedEmails.contactId],
+    references: [contacts.id],
+  }),
+  deal: one(deals, {
+    fields: [processedEmails.dealId],
+    references: [deals.id],
+  }),
+}));
+
 export const emailDraftsRelations = relations(emailDrafts, ({ one }) => ({
   processedEmail: one(processedEmails, {
     fields: [emailDrafts.processedEmailId],
     references: [processedEmails.id],
+  }),
+  gmailAccount: one(gmailAccounts, {
+    fields: [emailDrafts.gmailAccountId],
+    references: [gmailAccounts.id],
   }),
   contact: one(contacts, {
     fields: [emailDrafts.contactId],
@@ -304,6 +371,8 @@ export type NewActivity = typeof activities.$inferInsert;
 export type Reminder = typeof reminders.$inferSelect;
 export type NewReminder = typeof reminders.$inferInsert;
 export type Setting = typeof settings.$inferSelect;
+export type GmailAccount = typeof gmailAccounts.$inferSelect;
+export type NewGmailAccount = typeof gmailAccounts.$inferInsert;
 export type ProcessedEmail = typeof processedEmails.$inferSelect;
 export type EmailDraft = typeof emailDrafts.$inferSelect;
 export type NewEmailDraft = typeof emailDrafts.$inferInsert;
