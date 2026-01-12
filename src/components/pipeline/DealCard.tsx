@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, DollarSign, Building2, AlertTriangle, Clock, Trophy, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTier, getStage } from "@/lib/constants/pipeline";
+import { getEnquiryTypeConfig } from "@/app/api/webhooks/inbound/constants";
 import type { Deal, Contact } from "@/lib/db/schema";
 
 interface DealCardProps {
@@ -114,6 +115,16 @@ export function DealCard({ deal, onClick, isSelected, onSelectChange, selectionM
 
         {/* Title */}
         <div className="font-medium text-sm line-clamp-2">{deal.title}</div>
+
+        {/* Enquiry Type Badge */}
+        {deal.enquiryType && getEnquiryTypeConfig(deal.enquiryType) && (
+          <Badge
+            variant="outline"
+            className={cn("text-[10px] px-1.5 py-0 w-fit", getEnquiryTypeConfig(deal.enquiryType)!.color)}
+          >
+            {getEnquiryTypeConfig(deal.enquiryType)!.label}
+          </Badge>
+        )}
 
         {/* Contact */}
         {deal.contact && (

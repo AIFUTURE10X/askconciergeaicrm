@@ -33,6 +33,7 @@ export async function POST(request: Request) {
     const normalizedEmail = data.email.toLowerCase().trim();
 
     console.log(`[Webhook] ${source}:${event} from ${apiKeySource} - ${normalizedEmail}`);
+    console.log(`[Webhook] Full payload:`, JSON.stringify(body, null, 2));
 
     // Find or create contact
     let contact = await db.query.contacts.findFirst({
@@ -168,7 +169,10 @@ async function createNewDeal(
   data: WebhookPayload["data"],
   config: typeof SOURCE_CONFIG[keyof typeof SOURCE_CONFIG]
 ) {
-  const dealTitle = generateDealTitle(source, data);
+  // Extract enquiry type from metadata (for contact_form source)
+  const enquiryType = (data.metadata?.enquiryType as string) || null;
+
+  const dealTitle = generateDealTitle(source, data, enquiryType);
   const followUpDate = new Date();
   followUpDate.setDate(followUpDate.getDate() + 1); // Follow up tomorrow
 
@@ -182,6 +186,7 @@ async function createNewDeal(
       tier: data.tier || null,
       billingPeriod: data.billingPeriod || "monthly",
       leadSource: mapSourceToLeadSource(source),
+      enquiryType: enquiryType,
       nextStep: config.nextStep || null,
       followUpDate: config.nextStep ? followUpDate : null,
       notes: data.message || null,
@@ -189,6 +194,6 @@ async function createNewDeal(
     })
     .returning();
 
-  console.log(`[Webhook] Created new deal: ${newDeal.id}`);
+  console.log(`[Webhook] Created new deal: ${newDeal.id} (enquiryType: ${enquiryType || 'none'})`);
   return newDeal;
 }

@@ -66,6 +66,7 @@ export const deals = pgTable(
     currentSystem: varchar("current_system", { length: 100 }), // What they're using now
     painPoint: varchar("pain_point", { length: 255 }), // Why they're talking to us
     leadSource: varchar("lead_source", { length: 50 }), // "linkedin", "referral", "cold_email", "inbound"
+    enquiryType: varchar("enquiry_type", { length: 20 }), // "sales", "support", "general"
 
     // Probability & timing
     probability: integer("probability").default(10), // 0-100%

@@ -19,7 +19,8 @@ export function formatSourceName(source: WebhookSource): string {
 
 export function generateDealTitle(
   source: WebhookSource,
-  data: WebhookPayload["data"]
+  data: WebhookPayload["data"],
+  enquiryType?: string | null
 ): string {
   const name = data.company || data.name || data.email.split("@")[0];
 
@@ -30,8 +31,16 @@ export function generateDealTitle(
       return data.tier
         ? `${name} - ${data.tier.charAt(0).toUpperCase() + data.tier.slice(1)} Plan`
         : `${name} - Subscription`;
-    case "contact_form":
-      return `${name} - Website Inquiry`;
+    case "contact_form": {
+      // Use enquiry type for more descriptive title
+      const typeLabel =
+        enquiryType === "sales"
+          ? "Sales Inquiry"
+          : enquiryType === "support"
+            ? "Support Request"
+            : "General Inquiry";
+      return `${name} - ${typeLabel}`;
+    }
     case "gmail":
       return `${name} - Email Inquiry`;
     case "guest_contact":

@@ -1,3 +1,6 @@
+// Enquiry types for contact form classification
+export type EnquiryType = "sales" | "support" | "general";
+
 // Webhook payload types
 export type WebhookSource =
   | "signup"

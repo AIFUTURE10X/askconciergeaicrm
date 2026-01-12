@@ -1,4 +1,31 @@
-import type { WebhookSource, SourceConfig } from "./types";
+import type { WebhookSource, SourceConfig, EnquiryType } from "./types";
+
+// Enquiry types with display configuration
+export const ENQUIRY_TYPES: {
+  id: EnquiryType;
+  label: string;
+  color: string;
+}[] = [
+  {
+    id: "sales",
+    label: "Sales",
+    color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  },
+  {
+    id: "support",
+    label: "Support",
+    color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+  },
+  {
+    id: "general",
+    label: "General",
+    color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
+  },
+];
+
+export function getEnquiryTypeConfig(id: string | null | undefined) {
+  return ENQUIRY_TYPES.find((t) => t.id === id) || null;
+}
 
 // Map account types to property types
 export const ACCOUNT_TYPE_MAP: Record<string, string> = {
