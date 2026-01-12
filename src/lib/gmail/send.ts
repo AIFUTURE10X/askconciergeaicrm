@@ -5,7 +5,11 @@
  * Requires gmail.send scope.
  */
 
-import { getValidAccessToken } from "./client";
+import {
+  getAllGmailAccounts,
+  getGmailAccountById,
+  getValidAccessTokenForAccount,
+} from "./client";
 
 interface SendEmailParams {
   to: string;
@@ -13,6 +17,7 @@ interface SendEmailParams {
   body: string;
   threadId?: string; // For replies in same thread
   inReplyTo?: string; // Original message ID for proper threading
+  gmailAccountId?: string; // Which account to send from
 }
 
 interface SendEmailResult {
@@ -53,10 +58,21 @@ function encodeEmail(
 }
 
 export async function sendEmail(params: SendEmailParams): Promise<SendEmailResult> {
-  const accessToken = await getValidAccessToken();
-  if (!accessToken) {
+  // Get the account to send from
+  let account;
+  if (params.gmailAccountId) {
+    account = await getGmailAccountById(params.gmailAccountId);
+  } else {
+    // Use first connected account as fallback
+    const accounts = await getAllGmailAccounts();
+    account = accounts[0];
+  }
+
+  if (!account) {
     return { success: false, error: "Gmail not connected" };
   }
+
+  const accessToken = await getValidAccessTokenForAccount(account);
 
   const raw = encodeEmail(
     params.to,
