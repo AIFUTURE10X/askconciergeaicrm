@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Inbox as InboxIcon, RefreshCw } from "lucide-react";
+import { Loader2, Inbox as InboxIcon, RefreshCw, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { DraftCard, type DraftWithRelations } from "@/components/inbox/DraftCard";
 import { DraftDetailSheet } from "@/components/inbox/DraftDetailSheet";
@@ -20,6 +20,7 @@ export default function InboxPage() {
   const [selectedDraft, setSelectedDraft] = useState<DraftWithRelations | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     fetchDrafts();
@@ -51,6 +52,32 @@ export default function InboxPage() {
     await fetchDrafts();
     setIsRefreshing(false);
     toast.success("Inbox refreshed");
+  }
+
+  async function handleSyncNow() {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/gmail/sync", { method: "POST" });
+      const data = await res.json();
+
+      if (data.success) {
+        if (data.processed > 0) {
+          toast.success(`Synced ${data.processed} new email(s)`);
+          // Refresh drafts to show new ones
+          await fetchDrafts();
+        } else {
+          toast.info("No new emails to sync");
+        }
+      } else if (data.message === "Gmail not connected") {
+        toast.error("Gmail not connected - go to Settings to connect");
+      } else {
+        toast.error(data.error || "Sync failed");
+      }
+    } catch {
+      toast.error("Failed to sync emails");
+    } finally {
+      setIsSyncing(false);
+    }
   }
 
   async function handleSend(id: string) {
@@ -179,19 +206,34 @@ export default function InboxPage() {
               All
             </Button>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-          >
-            {isRefreshing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            <span className="ml-2">Refresh</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSyncNow}
+              disabled={isSyncing}
+            >
+              {isSyncing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="h-4 w-4" />
+              )}
+              <span className="ml-2">Sync Gmail</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              <span className="ml-2">Refresh</span>
+            </Button>
+          </div>
         </div>
 
         {/* Drafts List */}
