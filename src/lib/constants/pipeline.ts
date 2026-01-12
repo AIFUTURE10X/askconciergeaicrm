@@ -88,15 +88,12 @@ export const PAIN_POINTS = [
   { id: "other", label: "Other" },
 ] as const;
 
-// Lost reasons (why we lost the deal)
+// Lost reasons (why we lost the deal) - simplified to 4 core options
 export const LOST_REASONS = [
-  { id: "price", label: "Price too high" },
-  { id: "feature_missing", label: "Missing feature" },
-  { id: "no_response", label: "No response (Ghosted)" },
-  { id: "competitor", label: "Went with competitor" },
-  { id: "timing", label: "Bad timing" },
-  { id: "budget", label: "No budget" },
-  { id: "other", label: "Other" },
+  { id: "price", label: "Price" },
+  { id: "competitor", label: "Competitor" },
+  { id: "feature_missing", label: "Missing Feature" },
+  { id: "no_response", label: "No Response" },
 ] as const;
 
 // Activity types with icons

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,22 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  TIERS,
-  PROPERTY_COUNT_RANGES,
-  CURRENT_SYSTEMS,
-  PAIN_POINTS,
-  SOURCES,
-} from "@/lib/constants/pipeline";
+import { TIERS } from "@/lib/constants/pipeline";
 import { Loader2 } from "lucide-react";
 import type { Contact } from "@/lib/db/schema";
+import {
+  ContactSelect,
+  TierBillingFields,
+  QualificationFields,
+} from "./DealFormFields";
 
 interface AddDealDialogProps {
   open: boolean;
@@ -48,6 +40,20 @@ interface AddDealDialogProps {
   contacts: Contact[];
 }
 
+const INITIAL_FORM_DATA = {
+  title: "",
+  contactId: "",
+  tier: "",
+  billingPeriod: "monthly",
+  propertyCount: 1,
+  propertyCountRange: "",
+  leadSource: "",
+  currentSystem: "",
+  painPoint: "",
+  expectedCloseDate: "",
+  notes: "",
+};
+
 export function AddDealDialog({
   open,
   onOpenChange,
@@ -55,27 +61,18 @@ export function AddDealDialog({
   contacts,
 }: AddDealDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    title: "",
-    contactId: "",
-    tier: "",
-    billingPeriod: "monthly",
-    propertyCount: 1,
-    propertyCountRange: "",
-    leadSource: "",
-    currentSystem: "",
-    painPoint: "",
-    expectedCloseDate: "",
-    notes: "",
-  });
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA);
 
-  // Calculate value based on tier
   const selectedTier = TIERS.find((t) => t.id === formData.tier);
   const value = selectedTier
     ? formData.billingPeriod === "annual"
       ? selectedTier.annual * formData.propertyCount
       : selectedTier.monthly * formData.propertyCount
     : 0;
+
+  const updateField = (field: string) => (value: string | number) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,20 +94,7 @@ export function AddDealDialog({
         expectedCloseDate: formData.expectedCloseDate || undefined,
         notes: formData.notes || undefined,
       });
-      // Reset form
-      setFormData({
-        title: "",
-        contactId: "",
-        tier: "",
-        billingPeriod: "monthly",
-        propertyCount: 1,
-        propertyCountRange: "",
-        leadSource: "",
-        currentSystem: "",
-        painPoint: "",
-        expectedCloseDate: "",
-        notes: "",
-      });
+      setFormData(INITIAL_FORM_DATA);
       onOpenChange(false);
     } finally {
       setIsSubmitting(false);
@@ -130,75 +114,23 @@ export function AddDealDialog({
               id="title"
               placeholder="e.g., Sunset Resort - Emerald Plan"
               value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
+              onChange={(e) => updateField("title")(e.target.value)}
               required
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="contact">Contact</Label>
-            <Select
-              value={formData.contactId}
-              onValueChange={(value) =>
-                setFormData({ ...formData, contactId: value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a contact" />
-              </SelectTrigger>
-              <SelectContent>
-                {contacts.map((contact) => (
-                  <SelectItem key={contact.id} value={contact.id}>
-                    {contact.name}
-                    {contact.company && ` (${contact.company})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <ContactSelect
+            value={formData.contactId}
+            onValueChange={updateField("contactId")}
+            contacts={contacts}
+          />
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="tier">Tier</Label>
-              <Select
-                value={formData.tier}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, tier: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select tier" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIERS.map((tier) => (
-                    <SelectItem key={tier.id} value={tier.id}>
-                      {tier.label} (${tier.monthly}/mo)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="billing">Billing</Label>
-              <Select
-                value={formData.billingPeriod}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, billingPeriod: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="annual">Annual</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          <TierBillingFields
+            tier={formData.tier}
+            billingPeriod={formData.billingPeriod}
+            onTierChange={updateField("tier")}
+            onBillingChange={updateField("billingPeriod")}
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -208,15 +140,9 @@ export function AddDealDialog({
                 type="number"
                 min={1}
                 value={formData.propertyCount}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    propertyCount: parseInt(e.target.value) || 1,
-                  })
-                }
+                onChange={(e) => updateField("propertyCount")(parseInt(e.target.value) || 1)}
               />
             </div>
-
             <div className="space-y-2">
               <Label>Deal Value</Label>
               <div className="h-9 px-3 flex items-center rounded-md border bg-muted text-sm">
@@ -226,94 +152,16 @@ export function AddDealDialog({
             </div>
           </div>
 
-          {/* Qualification Fields */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="leadSource">Lead Source</Label>
-              <Select
-                value={formData.leadSource}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, leadSource: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="How did they find us?" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SOURCES.map((source) => (
-                    <SelectItem key={source.id} value={source.id}>
-                      {source.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="propertyCountRange">Property Count</Label>
-              <Select
-                value={formData.propertyCountRange}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, propertyCountRange: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="How many properties?" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROPERTY_COUNT_RANGES.map((range) => (
-                    <SelectItem key={range.id} value={range.id}>
-                      {range.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="currentSystem">Current System</Label>
-              <Select
-                value={formData.currentSystem}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, currentSystem: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="What are they using?" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CURRENT_SYSTEMS.map((sys) => (
-                    <SelectItem key={sys.id} value={sys.id}>
-                      {sys.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="painPoint">Pain Point</Label>
-              <Select
-                value={formData.painPoint}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, painPoint: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Why talking to us?" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAIN_POINTS.map((pain) => (
-                    <SelectItem key={pain.id} value={pain.id}>
-                      {pain.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          <QualificationFields
+            leadSource={formData.leadSource}
+            propertyCountRange={formData.propertyCountRange}
+            currentSystem={formData.currentSystem}
+            painPoint={formData.painPoint}
+            onLeadSourceChange={updateField("leadSource")}
+            onPropertyCountRangeChange={updateField("propertyCountRange")}
+            onCurrentSystemChange={updateField("currentSystem")}
+            onPainPointChange={updateField("painPoint")}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="closeDate">Expected Close Date</Label>
@@ -321,9 +169,7 @@ export function AddDealDialog({
               id="closeDate"
               type="date"
               value={formData.expectedCloseDate}
-              onChange={(e) =>
-                setFormData({ ...formData, expectedCloseDate: e.target.value })
-              }
+              onChange={(e) => updateField("expectedCloseDate")(e.target.value)}
             />
           </div>
 
@@ -333,19 +179,13 @@ export function AddDealDialog({
               id="notes"
               placeholder="Any additional notes..."
               value={formData.notes}
-              onChange={(e) =>
-                setFormData({ ...formData, notes: e.target.value })
-              }
+              onChange={(e) => updateField("notes")(e.target.value)}
               rows={3}
             />
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting || !formData.title}>

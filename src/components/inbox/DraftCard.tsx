@@ -4,7 +4,8 @@ import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, User, Building2, Send, RefreshCw, Trash2 } from "lucide-react";
+import { Mail, User, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DRAFT_STATUSES, DRAFT_TONES } from "@/lib/constants/email-drafts";
 import type { EmailDraft, Contact, Deal } from "@/lib/db/schema";
 
@@ -16,21 +17,19 @@ export type DraftWithRelations = EmailDraft & {
 interface DraftCardProps {
   draft: DraftWithRelations;
   onSelect: (draft: DraftWithRelations) => void;
-  onSend: (id: string) => void;
-  onRegenerate: (id: string) => void;
   onDelete: (id: string) => void;
   isDeleting?: boolean;
-  isSending?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 export function DraftCard({
   draft,
   onSelect,
-  onSend,
-  onRegenerate,
   onDelete,
   isDeleting,
-  isSending,
+  isSelected,
+  onToggleSelect,
 }: DraftCardProps) {
   const status = DRAFT_STATUSES.find((s) => s.id === draft.status);
   const tone = DRAFT_TONES.find((t) => t.id === draft.tone);
@@ -38,105 +37,82 @@ export function DraftCard({
 
   return (
     <Card
-      className="cursor-pointer hover:shadow-md transition-shadow"
+      className="cursor-pointer hover:shadow-md transition-shadow h-full flex flex-col"
       onClick={() => onSelect(draft)}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0 space-y-2">
-            {/* From / Subject */}
-            <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Mail className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">
-                  {draft.originalFromName || draft.originalFromEmail}
-                </p>
-                <p className="text-sm text-muted-foreground truncate">
-                  {draft.originalSubject || "(No subject)"}
-                </p>
-              </div>
+      <CardContent className="p-2.5 flex flex-col flex-1">
+        {/* Header: Checkbox + Icon + Name */}
+        <div className="flex items-center gap-2 mb-1.5">
+          {onToggleSelect && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => onToggleSelect(draft.id)}
+                aria-label={`Select ${draft.originalFromName || draft.originalFromEmail}`}
+              />
             </div>
-
-            {/* Draft Preview */}
-            <p className="text-sm text-muted-foreground line-clamp-2 pl-13">
-              {draft.draftBody.substring(0, 150)}...
-            </p>
-
-            {/* Meta Info */}
-            <div className="flex items-center gap-3 pl-13 text-xs text-muted-foreground flex-wrap">
-              {draft.originalReceivedAt && (
-                <span>
-                  {format(new Date(draft.originalReceivedAt), "MMM d, h:mm a")}
-                </span>
-              )}
-              {draft.contact && (
-                <div className="flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  <span className="truncate max-w-[120px]">
-                    {draft.contact.name}
-                  </span>
-                </div>
-              )}
-              {draft.contact?.company && (
-                <div className="flex items-center gap-1">
-                  <Building2 className="h-3 w-3" />
-                  <span className="truncate max-w-[120px]">
-                    {draft.contact.company}
-                  </span>
-                </div>
-              )}
-            </div>
+          )}
+          <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Mail className="h-3.5 w-3.5 text-primary" />
           </div>
-
-          {/* Right Side: Status + Actions */}
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className={status?.color}>
-                {status?.label}
-              </Badge>
-              <Badge variant="outline">{tone?.label}</Badge>
-            </div>
-
-            {isPending && (
-              <div
-                className="flex items-center gap-1"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => onRegenerate(draft.id)}
-                  title="Regenerate"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-green-600 hover:text-green-700"
-                  onClick={() => onSend(draft.id)}
-                  disabled={isSending}
-                  title="Send"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  onClick={() => onDelete(draft.id)}
-                  disabled={isDeleting}
-                  title="Delete"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-xs truncate">
+              {draft.originalFromName || draft.originalFromEmail}
+            </p>
           </div>
         </div>
+
+        {/* Subject */}
+        <p className="text-xs font-medium truncate mb-1">
+          {draft.originalSubject || "(No subject)"}
+        </p>
+
+        {/* Draft Preview */}
+        <p className="text-[11px] text-muted-foreground line-clamp-2 flex-1 mb-1.5">
+          {draft.draftBody.substring(0, 80)}...
+        </p>
+
+        {/* Badges */}
+        <div className="flex items-center gap-1 mb-1.5 flex-wrap">
+          <Badge variant="secondary" className={`text-[10px] px-1 py-0 ${status?.color}`}>
+            {status?.label}
+          </Badge>
+          <Badge variant="outline" className="text-[10px] px-1 py-0">
+            {tone?.label}
+          </Badge>
+        </div>
+
+        {/* Meta: Date + Contact */}
+        <div className="text-[10px] text-muted-foreground space-y-0.5 mb-1.5">
+          {draft.originalReceivedAt && (
+            <p>{format(new Date(draft.originalReceivedAt), "MMM d")}</p>
+          )}
+          {draft.contact && (
+            <p className="flex items-center gap-1 truncate">
+              <User className="h-2.5 w-2.5 flex-shrink-0" />
+              <span className="truncate">{draft.contact.name}</span>
+            </p>
+          )}
+        </div>
+
+        {/* Delete Action */}
+        {isPending && (
+          <div
+            className="flex items-center justify-end pt-1.5 border-t"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-destructive hover:text-destructive"
+              onClick={() => onDelete(draft.id)}
+              disabled={isDeleting}
+              title="Delete"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

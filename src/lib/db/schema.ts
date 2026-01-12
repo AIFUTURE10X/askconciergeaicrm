@@ -74,6 +74,7 @@ export const deals = pgTable(
     // Outcome tracking
     closedAt: timestamp("closed_at"),
     lostReason: varchar("lost_reason", { length: 255 }),
+    lastStage: varchar("last_stage", { length: 50 }), // For re-opening closed deals
 
     // Next step / follow-up
     nextStep: text("next_step"), // What needs to happen next

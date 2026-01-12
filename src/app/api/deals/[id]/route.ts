@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { deals } from "@/lib/db/schema";
+import { deals, emailDrafts, processedEmails } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 interface RouteParams {
@@ -73,6 +73,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       followUpDate,
       closedAt,
       lostReason,
+      lastStage,
       notes,
       sortOrder,
     } = body;
@@ -105,6 +106,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       updateData.closedAt = closedAt ? new Date(closedAt) : null;
     }
     if (lostReason !== undefined) updateData.lostReason = lostReason;
+    if (lastStage !== undefined) updateData.lastStage = lastStage;
     if (notes !== undefined) updateData.notes = notes;
     if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
 
@@ -155,6 +157,18 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       return NextResponse.json({ message: "Deal not found" }, { status: 404 });
     }
 
+    // Unlink related records (keep drafts/emails, just remove deal reference)
+    await db
+      .update(processedEmails)
+      .set({ dealId: null })
+      .where(eq(processedEmails.dealId, id));
+
+    await db
+      .update(emailDrafts)
+      .set({ dealId: null })
+      .where(eq(emailDrafts.dealId, id));
+
+    // Delete the deal (activities and reminders cascade delete)
     await db.delete(deals).where(eq(deals.id, id));
 
     return NextResponse.json({ message: "Deal deleted successfully" });

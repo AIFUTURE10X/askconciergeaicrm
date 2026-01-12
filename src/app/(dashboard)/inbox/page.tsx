@@ -2,92 +2,86 @@
 
 import { useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Loader2, Inbox as InboxIcon, RefreshCw, Mail } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { DraftCard, type DraftWithRelations } from "@/components/inbox/DraftCard";
+import { DraftListRow } from "@/components/inbox/DraftListRow";
 import { DraftDetailSheet } from "@/components/inbox/DraftDetailSheet";
-import { DRAFT_STATUSES } from "@/lib/constants/email-drafts";
+import { InboxToolbar } from "./InboxToolbar";
+import { InboxEmptyState } from "./InboxEmptyState";
+import {
+  fetchDrafts as fetchDraftsApi,
+  syncGmail,
+  sendDraft,
+  regenerateDraft,
+  saveDraft,
+  deleteDraft,
+  bulkDeleteDrafts,
+} from "./inbox-actions";
 
 type StatusFilter = "pending" | "sent" | "all";
+type ViewMode = "grid" | "list";
 
 export default function InboxPage() {
   const [drafts, setDrafts] = useState<DraftWithRelations[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [filter, setFilter] = useState<StatusFilter>("pending");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedDraft, setSelectedDraft] = useState<DraftWithRelations | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
 
-  useEffect(() => {
-    fetchDrafts();
-  }, [filter]);
-
-  async function fetchDrafts() {
+  const loadDrafts = async () => {
     try {
-      const statuses =
-        filter === "all"
-          ? undefined
-          : filter === "pending"
-          ? "pending,generating"
-          : "sent";
-      const url = statuses ? `/api/drafts?statuses=${statuses}` : "/api/drafts";
-      const res = await fetch(url);
-      if (res.ok) {
-        const { drafts: data } = await res.json();
-        setDrafts(data);
-      }
+      const data = await fetchDraftsApi(filter);
+      setDrafts(data);
     } catch (error) {
       console.error("Error fetching drafts:", error);
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
-  async function handleRefresh() {
+  useEffect(() => {
+    loadDrafts();
+  }, [filter]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  }, [filter]);
+
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    await fetchDrafts();
+    await loadDrafts();
     setIsRefreshing(false);
+    setSelectedIds(new Set());
     toast.success("Inbox refreshed");
-  }
+  };
 
-  async function handleSyncNow() {
+  const handleSyncNow = async () => {
     setIsSyncing(true);
     try {
-      const res = await fetch("/api/gmail/sync", { method: "POST" });
-      const data = await res.json();
-
-      if (data.success) {
-        if (data.processed > 0) {
-          toast.success(`Synced ${data.processed} new email(s)`);
-          // Refresh drafts to show new ones
-          await fetchDrafts();
-        } else {
-          toast.info("No new emails to sync");
-        }
-      } else if (data.message === "Gmail not connected") {
-        toast.error("Gmail not connected - go to Settings to connect");
-      } else {
-        toast.error(data.error || "Sync failed");
+      const result = await syncGmail();
+      if (result.success && result.processed > 0) {
+        await loadDrafts();
       }
     } catch {
       toast.error("Failed to sync emails");
     } finally {
       setIsSyncing(false);
     }
-  }
+  };
 
-  async function handleSend(id: string) {
+  const handleSend = async (id: string) => {
     setSendingId(id);
     try {
-      const res = await fetch(`/api/drafts/${id}/send`, { method: "POST" });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Failed to send");
-      }
+      await sendDraft(id);
       setDrafts((prev) =>
         prev.map((d) =>
           d.id === id ? { ...d, status: "sent", sentAt: new Date() } : d
@@ -96,74 +90,109 @@ export default function InboxPage() {
       if (filter === "pending") {
         setDrafts((prev) => prev.filter((d) => d.id !== id));
       }
-      toast.success("Email sent successfully");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to send email");
     } finally {
       setSendingId(null);
     }
-  }
+  };
 
-  async function handleRegenerate(id: string, tone?: string, feedback?: string) {
+  const handleRegenerate = async (id: string, tone?: string, feedback?: string) => {
     try {
-      const res = await fetch(`/api/drafts/${id}/regenerate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tone, feedback }),
-      });
-      if (!res.ok) throw new Error("Failed to regenerate");
-      const { draft } = await res.json();
-      setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, ...draft } : d)));
-      if (selectedDraft?.id === id) {
-        setSelectedDraft({ ...selectedDraft, ...draft });
+      const draft = await regenerateDraft(id, tone, feedback);
+      if (draft) {
+        setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, ...draft } : d)));
+        if (selectedDraft?.id === id) {
+          setSelectedDraft({ ...selectedDraft, ...draft });
+        }
       }
-      toast.success("Draft regenerated");
-    } catch (error) {
+    } catch {
       toast.error("Failed to regenerate draft");
     }
-  }
+  };
 
-  async function handleSave(id: string, data: { draftSubject: string; draftBody: string }) {
+  const handleSave = async (id: string, data: { draftSubject: string; draftBody: string }) => {
     try {
-      const res = await fetch(`/api/drafts/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed to save");
-      const { draft } = await res.json();
-      setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, ...draft } : d)));
-      if (selectedDraft?.id === id) {
-        setSelectedDraft({ ...selectedDraft, ...draft });
+      const draft = await saveDraft(id, data);
+      if (draft) {
+        setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, ...draft } : d)));
+        if (selectedDraft?.id === id) {
+          setSelectedDraft({ ...selectedDraft, ...draft });
+        }
       }
-      toast.success("Draft saved");
-    } catch (error) {
+    } catch {
       toast.error("Failed to save draft");
     }
-  }
+  };
 
-  async function handleDelete(id: string) {
+  const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this draft?")) return;
 
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/drafts/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete");
+      await deleteDraft(id);
       setDrafts((prev) => prev.filter((d) => d.id !== id));
-      if (selectedDraft?.id === id) {
-        setSelectedDraft(null);
-      }
-      toast.success("Draft deleted");
-    } catch (error) {
+      if (selectedDraft?.id === id) setSelectedDraft(null);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    } catch {
       toast.error("Failed to delete draft");
     } finally {
       setDeletingId(null);
     }
-  }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} draft(s)?`)) return;
+
+    setIsBulkDeleting(true);
+    try {
+      await bulkDeleteDrafts(Array.from(selectedIds));
+      setDrafts((prev) => prev.filter((d) => !selectedIds.has(d.id)));
+      setSelectedIds(new Set());
+    } catch {
+      toast.error("Failed to delete drafts");
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectionMode(true);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectionMode && selectedIds.size === drafts.length) {
+      setSelectedIds(new Set());
+      setSelectionMode(false);
+    } else if (selectionMode && selectedIds.size > 0) {
+      setSelectedIds(new Set(drafts.map((d) => d.id)));
+    } else {
+      setSelectionMode(true);
+      setSelectedIds(new Set(drafts.map((d) => d.id)));
+    }
+  };
+
+  const cancelSelection = () => {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  };
 
   const pendingCount = drafts.filter(
     (d) => d.status === "pending" || d.status === "generating"
   ).length;
+
+  const allSelected = drafts.length > 0 && selectedIds.size === drafts.length;
+  const someSelected = selectedIds.size > 0 && selectedIds.size < drafts.length;
 
   if (isLoading) {
     return (
@@ -175,101 +204,61 @@ export default function InboxPage() {
 
   return (
     <>
-      <Header
-        title="Inbox"
-        description={`${pendingCount} pending drafts to review`}
-      />
+      <Header title="Inbox" description={`${pendingCount} pending drafts to review`} />
 
       <div className="p-6 space-y-4">
-        {/* Filters and Refresh */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-              variant={filter === "pending" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilter("pending")}
-            >
-              Pending
-            </Button>
-            <Button
-              variant={filter === "sent" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilter("sent")}
-            >
-              Sent
-            </Button>
-            <Button
-              variant={filter === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilter("all")}
-            >
-              All
-            </Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSyncNow}
-              disabled={isSyncing}
-            >
-              {isSyncing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Mail className="h-4 w-4" />
-              )}
-              <span className="ml-2">Sync Gmail</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-            >
-              {isRefreshing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-              <span className="ml-2">Refresh</span>
-            </Button>
-          </div>
-        </div>
+        <InboxToolbar
+          filter={filter}
+          viewMode={viewMode}
+          selectedCount={selectedIds.size}
+          totalCount={drafts.length}
+          allSelected={allSelected}
+          someSelected={someSelected}
+          isSyncing={isSyncing}
+          isRefreshing={isRefreshing}
+          isBulkDeleting={isBulkDeleting}
+          onFilterChange={setFilter}
+          onViewModeChange={setViewMode}
+          onToggleSelectAll={toggleSelectAll}
+          onCancelSelection={cancelSelection}
+          onBulkDelete={handleBulkDelete}
+          onSyncNow={handleSyncNow}
+          onRefresh={handleRefresh}
+        />
 
-        {/* Drafts List */}
         {drafts.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <InboxIcon className="h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-4 text-lg font-semibold">No drafts</h3>
-              <p className="mt-2 text-sm text-muted-foreground text-center max-w-sm">
-                {filter === "pending"
-                  ? "All caught up! No pending drafts to review."
-                  : filter === "sent"
-                  ? "No emails have been sent yet."
-                  : "Drafts will appear here when emails are received."}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
+          <InboxEmptyState filter={filter} />
+        ) : viewMode === "grid" ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-3">
             {drafts.map((draft) => (
               <DraftCard
                 key={draft.id}
                 draft={draft}
                 onSelect={setSelectedDraft}
-                onSend={handleSend}
-                onRegenerate={(id) => handleRegenerate(id)}
                 onDelete={handleDelete}
                 isDeleting={deletingId === draft.id}
-                isSending={sendingId === draft.id}
+                isSelected={selectedIds.has(draft.id)}
+                onToggleSelect={selectionMode ? toggleSelect : undefined}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
+            {drafts.map((draft) => (
+              <DraftListRow
+                key={draft.id}
+                draft={draft}
+                onSelect={setSelectedDraft}
+                onDelete={handleDelete}
+                isDeleting={deletingId === draft.id}
+                isSelected={selectedIds.has(draft.id)}
+                onToggleSelect={selectionMode ? toggleSelect : undefined}
               />
             ))}
           </div>
         )}
       </div>
 
-      {/* Draft Detail Sheet */}
       <DraftDetailSheet
         draft={selectedDraft}
         open={!!selectedDraft}

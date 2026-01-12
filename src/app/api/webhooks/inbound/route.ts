@@ -3,83 +3,15 @@ import { db } from "@/lib/db";
 import { contacts, deals, activities } from "@/lib/db/schema";
 import { eq, ilike } from "drizzle-orm";
 import { requireApiKey } from "@/lib/auth/api-key";
-
-// Webhook payload types
-type WebhookSource =
-  | "signup"
-  | "stripe"
-  | "contact_form"
-  | "gmail"
-  | "ticket"
-  | "guest_contact";
-
-interface WebhookPayload {
-  source: WebhookSource;
-  event: string;
-  data: {
-    email: string;
-    name?: string;
-    phone?: string;
-    company?: string;
-    accountType?: string;
-    tier?: string;
-    billingPeriod?: string;
-    message?: string;
-    subject?: string;
-    metadata?: Record<string, unknown>;
-  };
-}
-
-// Map account types to property types
-const ACCOUNT_TYPE_MAP: Record<string, string> = {
-  hotel: "hotel",
-  vacation_rental: "vacation_rental",
-  property_manager: "property_manager",
-  individual_host: "vacation_rental",
-};
-
-// Stage and probability by source
-const SOURCE_CONFIG: Record<
-  WebhookSource,
-  { stage: string; probability: number; nextStep: string; createDeal: boolean }
-> = {
-  signup: {
-    stage: "lead",
-    probability: 10,
-    nextStep: "Send welcome email and schedule intro call",
-    createDeal: true,
-  },
-  stripe: {
-    stage: "closed_won",
-    probability: 100,
-    nextStep: "",
-    createDeal: true,
-  },
-  contact_form: {
-    stage: "qualified",
-    probability: 25,
-    nextStep: "Respond within 24 hours",
-    createDeal: true,
-  },
-  gmail: {
-    stage: "lead",
-    probability: 10,
-    nextStep: "Qualify lead - determine needs",
-    createDeal: true,
-  },
-  ticket: {
-    stage: "lead",
-    probability: 10,
-    nextStep: "",
-    createDeal: false, // Just log activity
-  },
-  guest_contact: {
-    stage: "lead",
-    probability: 5,
-    nextStep: "Follow up if marketing consent given",
-    createDeal: true,
-  },
-};
+import type { WebhookPayload } from "./types";
+import { ACCOUNT_TYPE_MAP, SOURCE_CONFIG } from "./constants";
+import {
+  mapSourceToContactSource,
+  mapSourceToLeadSource,
+  formatSourceName,
+  generateDealTitle,
+  formatActivityDescription,
+} from "./utils";
 
 export async function POST(request: Request) {
   // Validate API key
@@ -150,67 +82,9 @@ export async function POST(request: Request) {
       });
 
       if (existingDeal) {
-        // Update existing deal based on event
-        if (source === "stripe" && event === "subscription_created") {
-          // Upgrade - mark as won
-          await db
-            .update(deals)
-            .set({
-              stage: "closed_won",
-              probability: 100,
-              tier: data.tier || existingDeal.tier,
-              billingPeriod: data.billingPeriod || existingDeal.billingPeriod,
-              closedAt: new Date(),
-              updatedAt: new Date(),
-            })
-            .where(eq(deals.id, existingDeal.id));
-
-          deal = existingDeal;
-          console.log(`[Webhook] Marked deal as won: ${deal.id}`);
-        } else if (source === "stripe" && event === "subscription_cancelled") {
-          // Churn - mark as lost
-          await db
-            .update(deals)
-            .set({
-              stage: "closed_lost",
-              probability: 0,
-              lostReason: "Customer cancelled subscription",
-              closedAt: new Date(),
-              updatedAt: new Date(),
-            })
-            .where(eq(deals.id, existingDeal.id));
-
-          deal = existingDeal;
-          console.log(`[Webhook] Marked deal as lost: ${deal.id}`);
-        } else {
-          deal = existingDeal;
-          console.log(`[Webhook] Using existing deal: ${deal.id}`);
-        }
+        deal = await handleExistingDeal(existingDeal, source, event, data);
       } else {
-        // Create new deal
-        const dealTitle = generateDealTitle(source, data);
-        const followUpDate = new Date();
-        followUpDate.setDate(followUpDate.getDate() + 1); // Follow up tomorrow
-
-        const [newDeal] = await db
-          .insert(deals)
-          .values({
-            contactId: contact.id,
-            title: dealTitle,
-            stage: config.stage,
-            probability: config.probability,
-            tier: data.tier || null,
-            billingPeriod: data.billingPeriod || "monthly",
-            leadSource: mapSourceToLeadSource(source),
-            nextStep: config.nextStep || null,
-            followUpDate: config.nextStep ? followUpDate : null,
-            notes: data.message || null,
-            closedAt: config.stage === "closed_won" ? new Date() : null,
-          })
-          .returning();
-
-        deal = newDeal;
-        console.log(`[Webhook] Created new deal: ${deal.id}`);
+        deal = await createNewDeal(contact.id, source, data, config);
       }
     }
 
@@ -246,84 +120,75 @@ export async function POST(request: Request) {
   }
 }
 
-// Helper functions
-
-function mapSourceToContactSource(source: WebhookSource): string {
-  const map: Record<WebhookSource, string> = {
-    signup: "inbound",
-    stripe: "inbound",
-    contact_form: "inbound",
-    gmail: "inbound",
-    ticket: "inbound",
-    guest_contact: "inbound",
-  };
-  return map[source];
-}
-
-function mapSourceToLeadSource(source: WebhookSource): string {
-  const map: Record<WebhookSource, string> = {
-    signup: "inbound",
-    stripe: "inbound",
-    contact_form: "inbound",
-    gmail: "cold_email",
-    ticket: "inbound",
-    guest_contact: "referral",
-  };
-  return map[source];
-}
-
-function formatSourceName(source: WebhookSource): string {
-  const map: Record<WebhookSource, string> = {
-    signup: "Trial Signup",
-    stripe: "Stripe",
-    contact_form: "Contact Form",
-    gmail: "Email",
-    ticket: "Support Ticket",
-    guest_contact: "Guest Contact",
-  };
-  return map[source];
-}
-
-function generateDealTitle(
-  source: WebhookSource,
-  data: WebhookPayload["data"]
-): string {
-  const name = data.company || data.name || data.email.split("@")[0];
-
-  switch (source) {
-    case "signup":
-      return `${name} - Trial Signup`;
-    case "stripe":
-      return data.tier
-        ? `${name} - ${data.tier.charAt(0).toUpperCase() + data.tier.slice(1)} Plan`
-        : `${name} - Subscription`;
-    case "contact_form":
-      return `${name} - Website Inquiry`;
-    case "gmail":
-      return `${name} - Email Inquiry`;
-    case "guest_contact":
-      return `${name} - Guest Lead`;
-    default:
-      return `${name} - New Lead`;
-  }
-}
-
-function formatActivityDescription(
-  source: WebhookSource,
+async function handleExistingDeal(
+  existingDeal: typeof deals.$inferSelect,
+  source: WebhookPayload["source"],
   event: string,
   data: WebhookPayload["data"]
-): string {
-  const lines = [`Source: ${formatSourceName(source)}`, `Event: ${event}`];
+) {
+  if (source === "stripe" && event === "subscription_created") {
+    // Upgrade - mark as won
+    await db
+      .update(deals)
+      .set({
+        stage: "closed_won",
+        probability: 100,
+        tier: data.tier || existingDeal.tier,
+        billingPeriod: data.billingPeriod || existingDeal.billingPeriod,
+        closedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(deals.id, existingDeal.id));
 
-  if (data.subject) lines.push(`Subject: ${data.subject}`);
-  if (data.message) lines.push(`\nMessage:\n${data.message}`);
-  if (data.tier) lines.push(`Tier: ${data.tier}`);
-  if (data.billingPeriod) lines.push(`Billing: ${data.billingPeriod}`);
-  if (data.accountType) lines.push(`Account Type: ${data.accountType}`);
+    console.log(`[Webhook] Marked deal as won: ${existingDeal.id}`);
+  } else if (source === "stripe" && event === "subscription_cancelled") {
+    // Churn - mark as lost
+    await db
+      .update(deals)
+      .set({
+        stage: "closed_lost",
+        probability: 0,
+        lostReason: "Customer cancelled subscription",
+        closedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(deals.id, existingDeal.id));
 
-  if (data.metadata && Object.keys(data.metadata).length > 0) {
-    lines.push(`\nMetadata: ${JSON.stringify(data.metadata, null, 2)}`);
+    console.log(`[Webhook] Marked deal as lost: ${existingDeal.id}`);
+  } else {
+    console.log(`[Webhook] Using existing deal: ${existingDeal.id}`);
   }
 
-  return lines.join("\n");
+  return existingDeal;
+}
+
+async function createNewDeal(
+  contactId: string,
+  source: WebhookPayload["source"],
+  data: WebhookPayload["data"],
+  config: typeof SOURCE_CONFIG[keyof typeof SOURCE_CONFIG]
+) {
+  const dealTitle = generateDealTitle(source, data);
+  const followUpDate = new Date();
+  followUpDate.setDate(followUpDate.getDate() + 1); // Follow up tomorrow
+
+  const [newDeal] = await db
+    .insert(deals)
+    .values({
+      contactId,
+      title: dealTitle,
+      stage: config.stage,
+      probability: config.probability,
+      tier: data.tier || null,
+      billingPeriod: data.billingPeriod || "monthly",
+      leadSource: mapSourceToLeadSource(source),
+      nextStep: config.nextStep || null,
+      followUpDate: config.nextStep ? followUpDate : null,
+      notes: data.message || null,
+      closedAt: config.stage === "closed_won" ? new Date() : null,
+    })
+    .returning();
+
+  console.log(`[Webhook] Created new deal: ${newDeal.id}`);
+  return newDeal;
 }

@@ -9,6 +9,7 @@ import {
   Users,
   Bell,
   Inbox,
+  Archive,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/inbox", label: "Inbox", icon: Inbox },
   { href: "/pipeline", label: "Pipeline", icon: Kanban },
+  { href: "/closed", label: "Closed", icon: Archive },
   { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/reminders", label: "Reminders", icon: Bell },
 ];
