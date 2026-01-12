@@ -33,7 +33,6 @@ export async function POST(request: Request) {
     const normalizedEmail = data.email.toLowerCase().trim();
 
     console.log(`[Webhook] ${source}:${event} from ${apiKeySource} - ${normalizedEmail}`);
-    console.log(`[Webhook] Full payload:`, JSON.stringify(body, null, 2));
 
     // Find or create contact
     let contact = await db.query.contacts.findFirst({
