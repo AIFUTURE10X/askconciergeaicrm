@@ -3,13 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { PipelineColumn } from "./PipelineColumn";
+import { PipelineListView } from "./PipelineListView";
 import { DealDetailDrawer } from "./DealDetailDrawer";
 import { AddDealDialog } from "./AddDealDialog";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Loader2, Download, Trash2 } from "lucide-react";
+import { Loader2, Download, Trash2, LayoutGrid, List } from "lucide-react";
 import { ACTIVE_STAGES } from "@/lib/constants/pipeline";
 import { exportDealsToCSV } from "./pipeline-utils";
 import type { Deal, Contact } from "@/lib/db/schema";
@@ -26,6 +27,7 @@ export function PipelineBoard() {
   const [selectedDeals, setSelectedDeals] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [viewMode, setViewMode] = useState<"board" | "list">("board");
 
   const fetchData = useCallback(async () => {
     try {
@@ -248,6 +250,25 @@ export function PipelineBoard() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {/* View Toggle */}
+          <div className="flex items-center border rounded-md">
+            <Button
+              variant={viewMode === "board" ? "default" : "ghost"}
+              size="sm"
+              className="rounded-r-none px-2.5"
+              onClick={() => setViewMode("board")}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              className="rounded-l-none px-2.5"
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
           {activeDeals.length > 0 && !selectionMode && (
             <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="h-4 w-4 mr-2" />
@@ -258,21 +279,31 @@ export function PipelineBoard() {
       </div>
 
       <div className="p-6 pt-4">
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {ACTIVE_STAGES.map((stage) => (
-              <PipelineColumn
-                key={stage.id}
-                stage={stage}
-                deals={dealsByStage[stage.id] || []}
-                onDealClick={handleDealClick}
-                selectedDeals={selectedDeals}
-                onSelectDeal={handleSelectDeal}
-                selectionMode={selectionMode}
-              />
-            ))}
-          </div>
-        </DragDropContext>
+        {viewMode === "board" ? (
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <div className="flex gap-4 overflow-x-auto pb-4">
+              {ACTIVE_STAGES.map((stage) => (
+                <PipelineColumn
+                  key={stage.id}
+                  stage={stage}
+                  deals={dealsByStage[stage.id] || []}
+                  onDealClick={handleDealClick}
+                  selectedDeals={selectedDeals}
+                  onSelectDeal={handleSelectDeal}
+                  selectionMode={selectionMode}
+                />
+              ))}
+            </div>
+          </DragDropContext>
+        ) : (
+          <PipelineListView
+            deals={activeDeals}
+            onDealClick={handleDealClick}
+            selectedDeals={selectedDeals}
+            onSelectDeal={handleSelectDeal}
+            selectionMode={selectionMode}
+          />
+        )}
       </div>
 
       <AddDealDialog
