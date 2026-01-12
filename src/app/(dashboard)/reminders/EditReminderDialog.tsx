@@ -158,14 +158,14 @@ export function EditReminderDialog({
           <div className="space-y-2">
             <Label htmlFor="edit-deal">Link to Deal</Label>
             <Select
-              value={formData.dealId}
-              onValueChange={(value) => setFormData({ ...formData, dealId: value })}
+              value={formData.dealId || "__none__"}
+              onValueChange={(value) => setFormData({ ...formData, dealId: value === "__none__" ? "" : value })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Optional" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="__none__">None</SelectItem>
                 {deals.map((deal) => (
                   <SelectItem key={deal.id} value={deal.id}>
                     {deal.title}
