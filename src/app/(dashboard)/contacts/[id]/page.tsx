@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ActivityLogDialog } from "@/components/activities/ActivityLogDialog";
 import { ActivityTimeline } from "@/components/activities/ActivityTimeline";
 import { EmailComposeDialog } from "@/components/email/EmailComposeDialog";
+import { AddDealDialog } from "@/components/pipeline/AddDealDialog";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { ContactInfoCard } from "./ContactInfoCard";
@@ -31,6 +32,7 @@ export default function ContactDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [isAddDealDialogOpen, setIsAddDealDialogOpen] = useState(false);
 
   const fetchContact = useCallback(async () => {
     try {
@@ -94,6 +96,35 @@ export default function ContactDetailPage() {
     );
   };
 
+  const handleCreateDeal = async (data: {
+    title: string;
+    contactId?: string;
+    tier?: string;
+    value?: number;
+    billingPeriod?: string;
+    propertyCount?: number;
+    propertyCountRange?: string;
+    leadSource?: string;
+    currentSystem?: string;
+    painPoint?: string;
+    expectedCloseDate?: string;
+    notes?: string;
+  }) => {
+    const res = await fetch("/api/deals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...data, contactId }),
+    });
+
+    if (!res.ok) throw new Error("Failed to create deal");
+
+    const { deal } = await res.json();
+    setContact((prev) =>
+      prev ? { ...prev, deals: [deal, ...prev.deals] } : null
+    );
+    toast.success("Deal created");
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -108,17 +139,17 @@ export default function ContactDetailPage() {
     <>
       <Header title={contact.name} description={contact.company || undefined} />
 
-      <div className="p-6 space-y-6">
-        <Button variant="ghost" asChild className="gap-2">
+      <div className="p-4 space-y-3">
+        <Button variant="ghost" size="sm" asChild className="gap-1 h-7 text-xs">
           <Link href="/contacts">
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-3 w-3" />
             Back to Contacts
           </Link>
         </Button>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-3">
           {/* Left Column */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-3">
             <ContactInfoCard
               contact={contact}
               onEmailClick={() => setIsEmailDialogOpen(true)}
@@ -128,22 +159,23 @@ export default function ContactDetailPage() {
           </div>
 
           {/* Right Column */}
-          <div className="lg:col-span-2 space-y-6">
-            <ContactDealsCard deals={contact.deals} contactId={contactId} />
+          <div className="lg:col-span-2 space-y-3">
+            <ContactDealsCard deals={contact.deals} onAddDeal={() => setIsAddDealDialogOpen(true)} />
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-3">
-                <CardTitle className="text-base">Activity Timeline</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between py-2 px-3">
+                <CardTitle className="text-sm">Activity Timeline</CardTitle>
                 <Button
                   size="sm"
                   variant="outline"
+                  className="h-6 text-xs"
                   onClick={() => setIsActivityDialogOpen(true)}
                 >
-                  <Plus className="h-4 w-4 mr-1" />
+                  <Plus className="h-3 w-3 mr-1" />
                   Log Activity
                 </Button>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-3 py-2">
                 <ActivityTimeline activities={contact.activities} showDealLink />
               </CardContent>
             </Card>
@@ -168,6 +200,14 @@ export default function ContactDetailPage() {
           onEmailSent={handleEmailSent}
         />
       )}
+
+      <AddDealDialog
+        open={isAddDealDialogOpen}
+        onOpenChange={setIsAddDealDialogOpen}
+        onSubmit={handleCreateDeal}
+        contacts={[contact]}
+        defaultContactId={contactId}
+      />
     </>
   );
 }

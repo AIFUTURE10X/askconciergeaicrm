@@ -18,29 +18,29 @@ export function DealSummaryCard({ deals }: DealSummaryCardProps) {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Deal Summary</CardTitle>
+      <CardHeader className="py-2 px-3">
+        <CardTitle className="text-sm">Deal Summary</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <div className="text-2xl font-bold">{deals.length}</div>
-            <p className="text-xs text-muted-foreground">Total Deals</p>
+      <CardContent className="px-3 pb-3 pt-0">
+        <div className="grid grid-cols-4 gap-2">
+          <div className="text-center">
+            <div className="text-lg font-bold">{deals.length}</div>
+            <p className="text-[10px] text-muted-foreground">Total</p>
           </div>
-          <div>
-            <div className="text-2xl font-bold">{activeDeals.length}</div>
-            <p className="text-xs text-muted-foreground">Active</p>
+          <div className="text-center">
+            <div className="text-lg font-bold">{activeDeals.length}</div>
+            <p className="text-[10px] text-muted-foreground">Active</p>
           </div>
-          <div>
-            <div className="text-2xl font-bold">{wonDeals.length}</div>
-            <p className="text-xs text-muted-foreground">Won</p>
+          <div className="text-center">
+            <div className="text-lg font-bold">{wonDeals.length}</div>
+            <p className="text-[10px] text-muted-foreground">Won</p>
           </div>
-          <div>
-            <div className="text-2xl font-bold flex items-center">
-              <DollarSign className="h-5 w-5" />
+          <div className="text-center">
+            <div className="text-lg font-bold flex items-center justify-center">
+              <DollarSign className="h-4 w-4" />
               {totalDealValue.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">Total Value</p>
+            <p className="text-[10px] text-muted-foreground">Value</p>
           </div>
         </div>
       </CardContent>

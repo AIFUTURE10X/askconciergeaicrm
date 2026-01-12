@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,7 @@ interface AddDealDialogProps {
     notes?: string;
   }) => Promise<void>;
   contacts: Contact[];
+  defaultContactId?: string;
 }
 
 const INITIAL_FORM_DATA = {
@@ -59,9 +60,23 @@ export function AddDealDialog({
   onOpenChange,
   onSubmit,
   contacts,
+  defaultContactId,
 }: AddDealDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+  const [formData, setFormData] = useState({
+    ...INITIAL_FORM_DATA,
+    contactId: defaultContactId || "",
+  });
+
+  // Reset form when dialog opens with default contact
+  useEffect(() => {
+    if (open) {
+      setFormData({
+        ...INITIAL_FORM_DATA,
+        contactId: defaultContactId || "",
+      });
+    }
+  }, [open, defaultContactId]);
 
   const selectedTier = TIERS.find((t) => t.id === formData.tier);
   const value = selectedTier

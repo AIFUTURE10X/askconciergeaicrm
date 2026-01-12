@@ -39,113 +39,115 @@ export function ContactInfoCard({ contact, onEmailClick, onLogActivity }: Contac
 
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="flex flex-col items-center text-center">
-          <Avatar className="h-20 w-20">
-            <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+      <CardContent className="p-3">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10 flex-shrink-0">
+            <AvatarFallback className="text-sm bg-primary/10 text-primary">
               {getInitials(contact.name)}
             </AvatarFallback>
           </Avatar>
-          <h2 className="mt-4 text-xl font-semibold">{contact.name}</h2>
-          {contact.title && contact.company && (
-            <p className="text-muted-foreground">
-              {contact.title} at {contact.company}
-            </p>
-          )}
-          {propertyType && (
-            <Badge variant="secondary" className="mt-2">
-              {propertyType.label}
-            </Badge>
-          )}
+          <div className="flex-1 min-w-0">
+            <h2 className="text-sm font-semibold truncate">{contact.name}</h2>
+            {contact.title && contact.company && (
+              <p className="text-xs text-muted-foreground truncate">
+                {contact.title} at {contact.company}
+              </p>
+            )}
+            {propertyType && (
+              <Badge variant="secondary" className="text-[10px] px-1 py-0 mt-0.5">
+                {propertyType.label}
+              </Badge>
+            )}
+          </div>
         </div>
 
-        <Separator className="my-6" />
+        <Separator className="my-2" />
 
         {/* Contact Details */}
-        <div className="space-y-4">
+        <div className="space-y-1.5">
           {contact.email && (
-            <div className="flex items-center gap-3">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <a href={`mailto:${contact.email}`} className="text-sm hover:underline">
+            <div className="flex items-center gap-2">
+              <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+              <a href={`mailto:${contact.email}`} className="text-xs hover:underline truncate">
                 {contact.email}
               </a>
             </div>
           )}
           {contact.phone && (
-            <div className="flex items-center gap-3">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <a href={`tel:${contact.phone}`} className="text-sm hover:underline">
+            <div className="flex items-center gap-2">
+              <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+              <a href={`tel:${contact.phone}`} className="text-xs hover:underline">
                 {contact.phone}
               </a>
             </div>
           )}
           {contact.linkedinUrl && (
-            <div className="flex items-center gap-3">
-              <Linkedin className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2">
+              <Linkedin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
               <a
                 href={contact.linkedinUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm hover:underline flex items-center gap-1"
+                className="text-xs hover:underline flex items-center gap-1"
               >
-                LinkedIn Profile
-                <ExternalLink className="h-3 w-3" />
+                LinkedIn
+                <ExternalLink className="h-2.5 w-2.5" />
               </a>
             </div>
           )}
           {contact.website && (
-            <div className="flex items-center gap-3">
-              <Globe className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2">
+              <Globe className="h-3 w-3 text-muted-foreground flex-shrink-0" />
               <a
                 href={contact.website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm hover:underline flex items-center gap-1"
+                className="text-xs hover:underline flex items-center gap-1"
               >
                 Website
-                <ExternalLink className="h-3 w-3" />
+                <ExternalLink className="h-2.5 w-2.5" />
               </a>
             </div>
           )}
           {source && (
-            <div className="flex items-center gap-3">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Source: {source.label}</span>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs text-muted-foreground">Source: {source.label}</span>
             </div>
           )}
         </div>
 
-        <Separator className="my-6" />
+        <Separator className="my-2" />
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           {contact.email && (
-            <Button variant="outline" size="sm" onClick={onEmailClick}>
-              <Mail className="h-4 w-4 mr-1" />
+            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onEmailClick}>
+              <Mail className="h-3 w-3 mr-1" />
               Email
             </Button>
           )}
           {contact.phone && (
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
               <a href={`tel:${contact.phone}`}>
-                <Phone className="h-4 w-4 mr-1" />
+                <Phone className="h-3 w-3 mr-1" />
                 Call
               </a>
             </Button>
           )}
-          <Button variant="outline" size="sm" className="col-span-2" onClick={onLogActivity}>
-            <Plus className="h-4 w-4 mr-1" />
-            Log Activity
+          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onLogActivity}>
+            <Plus className="h-3 w-3 mr-1" />
+            Log
           </Button>
         </div>
 
         {/* Notes */}
         {contact.notes && (
           <>
-            <Separator className="my-6" />
+            <Separator className="my-2" />
             <div>
-              <h4 className="text-sm font-medium mb-2">Notes</h4>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+              <h4 className="text-xs font-medium mb-1">Notes</h4>
+              <p className="text-xs text-muted-foreground whitespace-pre-wrap line-clamp-3">
                 {contact.notes}
               </p>
             </div>
@@ -153,9 +155,9 @@ export function ContactInfoCard({ contact, onEmailClick, onLogActivity }: Contac
         )}
 
         {/* Metadata */}
-        <div className="mt-6 pt-4 border-t text-xs text-muted-foreground space-y-1">
-          <div>Created: {format(new Date(contact.createdAt), "MMM d, yyyy")}</div>
-          <div>Updated: {format(new Date(contact.updatedAt), "MMM d, yyyy")}</div>
+        <div className="mt-2 pt-2 border-t text-[10px] text-muted-foreground flex gap-3">
+          <span>Created: {format(new Date(contact.createdAt), "MMM d, yyyy")}</span>
+          <span>Updated: {format(new Date(contact.updatedAt), "MMM d, yyyy")}</span>
         </div>
       </CardContent>
     </Card>
