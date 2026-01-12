@@ -21,11 +21,7 @@ interface GmailStatus {
   accounts: GmailAccount[];
 }
 
-interface GmailSettingsCardProps {
-  onStatusChange?: () => void;
-}
-
-export function GmailSettingsCard({ onStatusChange }: GmailSettingsCardProps) {
+export function GmailSettingsCard() {
   const [gmailStatus, setGmailStatus] = useState<GmailStatus | null>(null);
   const [isLoadingGmail, setIsLoadingGmail] = useState(true);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
@@ -36,13 +32,12 @@ export function GmailSettingsCard({ onStatusChange }: GmailSettingsCardProps) {
       const res = await fetch("/api/gmail/status");
       const data = await res.json();
       setGmailStatus(data);
-      onStatusChange?.();
     } catch {
       setGmailStatus({ configured: false, connected: false, accounts: [] });
     } finally {
       setIsLoadingGmail(false);
     }
-  }, [onStatusChange]);
+  }, []);
 
   useEffect(() => {
     fetchGmailStatus();

@@ -29,7 +29,7 @@ export default function SettingsPage() {
 
       <div className="p-6 space-y-6 max-w-2xl">
         <AppearanceCard />
-        <GmailSettingsCard key={gmailKey} onStatusChange={handleGmailSuccess} />
+        <GmailSettingsCard key={gmailKey} />
         <DataManagementCard />
         <AboutCard />
       </div>
