@@ -52,7 +52,7 @@ export function DraftListRow({
         </div>
         <span className="text-[10px] text-muted-foreground flex-shrink-0">
           {draft.originalReceivedAt
-            ? format(new Date(draft.originalReceivedAt), "MMM d")
+            ? format(new Date(draft.originalReceivedAt), "MMM d, h:mm a")
             : ""}
         </span>
       </div>

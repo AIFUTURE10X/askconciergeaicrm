@@ -85,7 +85,7 @@ export function DraftCard({
         {/* Meta: Date + Contact */}
         <div className="text-[10px] text-muted-foreground space-y-0.5 mb-1.5">
           {draft.originalReceivedAt && (
-            <p>{format(new Date(draft.originalReceivedAt), "MMM d")}</p>
+            <p>{format(new Date(draft.originalReceivedAt), "MMM d, h:mm a")}</p>
           )}
           {draft.contact && (
             <p className="flex items-center gap-1 truncate">

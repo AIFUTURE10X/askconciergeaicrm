@@ -167,7 +167,7 @@ export function DealCard({ deal, onClick, isSelected, onSelectChange, selectionM
         {deal.lastContactedAt && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
-            <span>Last contact: {format(new Date(deal.lastContactedAt), "MMM d")}</span>
+            <span>Last contact: {format(new Date(deal.lastContactedAt), "MMM d, h:mm a")}</span>
           </div>
         )}
 
