@@ -247,26 +247,45 @@ function getEmailBody(payload: { body?: { data?: string }; parts?: { mimeType: s
 }
 
 /**
- * Fetch unread emails from Gmail
+ * Fetch emails from Gmail (optionally only unread)
  */
-export async function fetchUnreadEmails(
-  labelFilter?: string,
-  maxResults = 10
+export async function fetchEmails(
+  options: {
+    labelFilter?: string;
+    maxResults?: number;
+    onlyUnread?: boolean;
+    newerThanDays?: number;
+  } = {}
 ): Promise<GmailMessage[]> {
+  const { labelFilter, maxResults = 10, onlyUnread = false, newerThanDays } = options;
+
   const accessToken = await getValidAccessToken();
   if (!accessToken) {
     throw new Error("Gmail not connected");
   }
 
   // Build query
-  let query = "is:unread";
-  if (labelFilter) {
-    query += ` label:${labelFilter}`;
+  const queryParts: string[] = [];
+
+  if (onlyUnread) {
+    queryParts.push("is:unread");
   }
+
+  if (labelFilter) {
+    queryParts.push(`label:${labelFilter}`);
+  }
+
+  if (newerThanDays) {
+    queryParts.push(`newer_than:${newerThanDays}d`);
+  }
+
+  const query = queryParts.join(" ") || undefined;
 
   // List messages
   const listUrl = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
-  listUrl.searchParams.set("q", query);
+  if (query) {
+    listUrl.searchParams.set("q", query);
+  }
   listUrl.searchParams.set("maxResults", String(maxResults));
 
   const listResponse = await fetch(listUrl.toString(), {
@@ -314,6 +333,20 @@ export async function fetchUnreadEmails(
   }
 
   return messages;
+}
+
+/**
+ * Fetch unread emails from Gmail (backward-compatible wrapper)
+ */
+export async function fetchUnreadEmails(
+  labelFilter?: string,
+  maxResults = 10
+): Promise<GmailMessage[]> {
+  return fetchEmails({
+    labelFilter,
+    maxResults,
+    onlyUnread: true,
+  });
 }
 
 /**

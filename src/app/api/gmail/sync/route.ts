@@ -17,7 +17,7 @@ import {
 import { eq, ilike } from "drizzle-orm";
 import {
   isGmailConnected,
-  fetchUnreadEmails,
+  fetchEmails,
   markAsRead,
   addLabel,
 } from "@/lib/gmail/client";
@@ -37,11 +37,16 @@ export async function POST() {
   }
 
   try {
-    // Fetch unread emails
+    // Fetch recent emails (including read ones) from last 7 days
     const labelFilter = process.env.GMAIL_LABEL_FILTER || undefined;
-    const emails = await fetchUnreadEmails(labelFilter, 20);
+    const emails = await fetchEmails({
+      labelFilter,
+      maxResults: 50,
+      onlyUnread: false,
+      newerThanDays: 7,
+    });
 
-    console.log(`[Gmail Manual Sync] Found ${emails.length} unread emails`);
+    console.log(`[Gmail Manual Sync] Found ${emails.length} emails from last 7 days`);
 
     let processed = 0;
     let skipped = 0;
