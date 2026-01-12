@@ -8,8 +8,9 @@ import { AddDealDialog } from "./AddDealDialog";
 import { Header } from "@/components/layout/Header";
 import { ACTIVE_STAGES } from "@/lib/constants/pipeline";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Loader2, Download } from "lucide-react";
+import { Loader2, Download, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { PIPELINE_STAGES, TIERS } from "@/lib/constants/pipeline";
 import type { Deal, Contact } from "@/lib/db/schema";
@@ -23,6 +24,9 @@ export function PipelineBoard() {
   const [selectedDeal, setSelectedDeal] = useState<DealWithContact | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedDeals, setSelectedDeals] = useState<Set<string>>(new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch deals and contacts
   const fetchData = useCallback(async () => {
@@ -178,6 +182,68 @@ export function PipelineBoard() {
     setIsDetailOpen(true);
   };
 
+  // Handle deal selection
+  const handleSelectDeal = (dealId: string, selected: boolean) => {
+    setSelectedDeals((prev) => {
+      const next = new Set(prev);
+      if (selected) {
+        next.add(dealId);
+      } else {
+        next.delete(dealId);
+      }
+      return next;
+    });
+  };
+
+  // Toggle selection mode
+  const toggleSelectionMode = () => {
+    if (selectionMode) {
+      setSelectedDeals(new Set());
+    }
+    setSelectionMode(!selectionMode);
+  };
+
+  // Select all deals
+  const handleSelectAll = () => {
+    if (selectedDeals.size === deals.length) {
+      setSelectedDeals(new Set());
+    } else {
+      setSelectedDeals(new Set(deals.map((d) => d.id)));
+    }
+  };
+
+  // Bulk delete selected deals
+  const handleBulkDelete = async () => {
+    if (selectedDeals.size === 0) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${selectedDeals.size} deal(s)? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    try {
+      const res = await fetch("/api/deals/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selectedDeals) }),
+      });
+
+      if (!res.ok) throw new Error("Failed to delete deals");
+
+      const { deletedCount } = await res.json();
+      setDeals((prev) => prev.filter((d) => !selectedDeals.has(d.id)));
+      setSelectedDeals(new Set());
+      setSelectionMode(false);
+      toast.success(`${deletedCount} deal(s) deleted`);
+    } catch (error) {
+      console.error("Error bulk deleting:", error);
+      toast.error("Failed to delete deals");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // CSV Export
   const exportDealsToCSV = () => {
     const headers = [
@@ -249,13 +315,52 @@ export function PipelineBoard() {
         }}
       />
 
-      <div className="px-6 pt-2 flex justify-end">
-        {deals.length > 0 && (
-          <Button variant="outline" size="sm" onClick={exportDealsToCSV}>
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
-        )}
+      <div className="px-6 pt-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {deals.length > 0 && (
+            <Button
+              variant={selectionMode ? "default" : "outline"}
+              size="sm"
+              onClick={toggleSelectionMode}
+            >
+              {selectionMode ? "Cancel" : "Select"}
+            </Button>
+          )}
+          {selectionMode && (
+            <>
+              <div className="flex items-center gap-2 ml-2">
+                <Checkbox
+                  checked={selectedDeals.size === deals.length && deals.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+                <span className="text-sm text-muted-foreground">
+                  Select All ({selectedDeals.size}/{deals.length})
+                </span>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+                disabled={selectedDeals.size === 0 || isDeleting}
+              >
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4 mr-2" />
+                )}
+                Delete ({selectedDeals.size})
+              </Button>
+            </>
+          )}
+        </div>
+        <div>
+          {deals.length > 0 && !selectionMode && (
+            <Button variant="outline" size="sm" onClick={exportDealsToCSV}>
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="p-6 pt-4">
@@ -267,6 +372,9 @@ export function PipelineBoard() {
                 stage={stage}
                 deals={dealsByStage[stage.id] || []}
                 onDealClick={handleDealClick}
+                selectedDeals={selectedDeals}
+                onSelectDeal={handleSelectDeal}
+                selectionMode={selectionMode}
               />
             ))}
           </div>

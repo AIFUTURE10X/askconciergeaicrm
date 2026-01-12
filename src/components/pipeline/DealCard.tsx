@@ -4,6 +4,7 @@ import { format, differenceInDays, isToday, isPast, isTomorrow } from "date-fns"
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, DollarSign, Building2, AlertTriangle, Clock, Trophy, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTier, getStage } from "@/lib/constants/pipeline";
@@ -17,9 +18,12 @@ interface DealCardProps {
     followUpDate?: Date | string | null;
   };
   onClick?: () => void;
+  isSelected?: boolean;
+  onSelectChange?: (selected: boolean) => void;
+  selectionMode?: boolean;
 }
 
-export function DealCard({ deal, onClick }: DealCardProps) {
+export function DealCard({ deal, onClick, isSelected, onSelectChange, selectionMode }: DealCardProps) {
   const tier = deal.tier ? getTier(deal.tier) : null;
   const stage = getStage(deal.stage);
 
@@ -57,9 +61,24 @@ export function DealCard({ deal, onClick }: DealCardProps) {
         isWon && "border-2 border-green-400 dark:border-green-500 bg-green-50 dark:bg-green-950/30",
         isLost && "border-2 border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-950/30 opacity-75"
       )}
-      onClick={onClick}
+      onClick={selectionMode ? undefined : onClick}
     >
       <CardContent className="p-3 space-y-3">
+        {/* Selection Checkbox */}
+        {selectionMode && (
+          <div
+            className="flex items-center gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={(checked) => onSelectChange?.(checked === true)}
+              className="data-[state=checked]:bg-primary"
+            />
+            <span className="text-xs text-muted-foreground">Select</span>
+          </div>
+        )}
+
         {/* Status Badges */}
         {isWon && (
           <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium">

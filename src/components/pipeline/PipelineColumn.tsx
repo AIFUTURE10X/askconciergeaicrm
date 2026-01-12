@@ -13,9 +13,19 @@ interface PipelineColumnProps {
   };
   deals: (Deal & { contact: Contact | null })[];
   onDealClick: (deal: Deal & { contact: Contact | null }) => void;
+  selectedDeals?: Set<string>;
+  onSelectDeal?: (dealId: string, selected: boolean) => void;
+  selectionMode?: boolean;
 }
 
-export function PipelineColumn({ stage, deals, onDealClick }: PipelineColumnProps) {
+export function PipelineColumn({
+  stage,
+  deals,
+  onDealClick,
+  selectedDeals,
+  onSelectDeal,
+  selectionMode
+}: PipelineColumnProps) {
   const totalValue = deals.reduce((sum, deal) => {
     return sum + (deal.value ? parseFloat(deal.value) : 0);
   }, 0);
@@ -60,7 +70,13 @@ export function PipelineColumn({ stage, deals, onDealClick }: PipelineColumnProp
                       snapshot.isDragging && "rotate-2 scale-105"
                     )}
                   >
-                    <DealCard deal={deal} onClick={() => onDealClick(deal)} />
+                    <DealCard
+                      deal={deal}
+                      onClick={() => onDealClick(deal)}
+                      isSelected={selectedDeals?.has(deal.id)}
+                      onSelectChange={(selected) => onSelectDeal?.(deal.id, selected)}
+                      selectionMode={selectionMode}
+                    />
                   </div>
                 )}
               </Draggable>
