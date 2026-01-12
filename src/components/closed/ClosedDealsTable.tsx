@@ -6,8 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Trophy, XCircle, DollarSign, Calendar, LayoutGrid, List } from "lucide-react";
-import { LOST_REASONS } from "@/lib/constants/pipeline";
+import { Search, Trophy, XCircle, DollarSign, LayoutGrid, List } from "lucide-react";
 import { ClosedDealCard } from "./ClosedDealCard";
 import type { Deal, Contact } from "@/lib/db/schema";
 
@@ -127,8 +126,8 @@ export function ClosedDealsTable({
           </CardContent>
         </Card>
       ) : viewMode === "grid" ? (
-        /* Grid View */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+        /* Grid View - larger cards */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredDeals.map((deal) => (
             <ClosedDealCard
               key={deal.id}
@@ -138,13 +137,10 @@ export function ClosedDealsTable({
           ))}
         </div>
       ) : (
-        /* List View */
-        <div className="space-y-2">
+        /* List View - compact, 6 per row */
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
           {filteredDeals.map((deal) => {
             const isWon = deal.stage === "closed_won";
-            const lostReasonLabel = deal.lostReason
-              ? LOST_REASONS.find((r) => r.id === deal.lostReason)?.label
-              : null;
 
             return (
               <Card
@@ -152,59 +148,39 @@ export function ClosedDealsTable({
                 className="cursor-pointer hover:bg-muted/50 transition-colors"
                 onClick={() => onDealClick(deal)}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    {/* Left: Deal info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3">
-                        <h3 className="font-medium truncate">{deal.title}</h3>
-                        {isWon ? (
-                          <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100 flex-shrink-0">
-                            <Trophy className="h-3 w-3 mr-1" />
-                            Won
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 flex-shrink-0">
-                            <XCircle className="h-3 w-3 mr-1" />
-                            Lost
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                        {deal.contact && (
-                          <span>
-                            {deal.contact.name}
-                            {deal.contact.company && ` · ${deal.contact.company}`}
-                          </span>
-                        )}
-                        {!isWon && lostReasonLabel && (
-                          <span className="text-red-600 dark:text-red-400">
-                            {lostReasonLabel}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Right: Value and date */}
-                    <div className="flex items-center gap-6 flex-shrink-0">
-                      <div className="text-right">
-                        <div className="font-semibold flex items-center justify-end">
-                          <DollarSign className="h-4 w-4" />
-                          {deal.value ? parseFloat(deal.value).toLocaleString() : "0"}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          /{deal.billingPeriod === "annual" ? "year" : "month"}
-                        </div>
-                      </div>
-                      <div className="text-right text-sm text-muted-foreground w-24">
-                        <div className="flex items-center justify-end gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {deal.closedAt
-                            ? format(new Date(deal.closedAt), "MMM d, yyyy")
-                            : "-"}
-                        </div>
-                      </div>
-                    </div>
+                <CardContent className="p-2">
+                  {/* Status + Date */}
+                  <div className="flex items-center justify-between mb-1">
+                    {isWon ? (
+                      <Badge className="bg-green-100 text-green-700 border-green-200 text-[9px] px-1 py-0">
+                        <Trophy className="h-2.5 w-2.5 mr-0.5" />
+                        Won
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-red-100 text-red-700 border-red-200 text-[9px] px-1 py-0">
+                        <XCircle className="h-2.5 w-2.5 mr-0.5" />
+                        Lost
+                      </Badge>
+                    )}
+                    <span className="text-[10px] text-muted-foreground">
+                      {deal.closedAt
+                        ? format(new Date(deal.closedAt), "MMM d")
+                        : "-"}
+                    </span>
+                  </div>
+                  {/* Title */}
+                  <p className="text-xs font-medium truncate mb-1">{deal.title}</p>
+                  {/* Contact */}
+                  <p className="text-[10px] text-muted-foreground truncate mb-1">
+                    {deal.contact?.name || "No contact"}
+                  </p>
+                  {/* Value */}
+                  <div className="flex items-center text-xs font-semibold">
+                    <DollarSign className="h-3 w-3" />
+                    {deal.value ? parseFloat(deal.value).toLocaleString() : "0"}
+                    <span className="text-[10px] font-normal text-muted-foreground ml-0.5">
+                      /{deal.billingPeriod === "annual" ? "yr" : "mo"}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
