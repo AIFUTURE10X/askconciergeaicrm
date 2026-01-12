@@ -6,23 +6,29 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Trophy, XCircle, DollarSign, Calendar } from "lucide-react";
+import { Search, Trophy, XCircle, DollarSign, Calendar, LayoutGrid, List } from "lucide-react";
 import { LOST_REASONS } from "@/lib/constants/pipeline";
+import { ClosedDealCard } from "./ClosedDealCard";
 import type { Deal, Contact } from "@/lib/db/schema";
 
 type DealWithContact = Deal & { contact: Contact | null };
+type ViewMode = "list" | "grid";
 
 interface ClosedDealsTableProps {
   deals: DealWithContact[];
   filter: "all" | "won" | "lost";
+  viewMode: ViewMode;
   onFilterChange: (filter: "all" | "won" | "lost") => void;
+  onViewModeChange: (mode: ViewMode) => void;
   onDealClick: (deal: DealWithContact) => void;
 }
 
 export function ClosedDealsTable({
   deals,
   filter,
+  viewMode,
   onFilterChange,
+  onViewModeChange,
   onDealClick,
 }: ClosedDealsTableProps) {
   const [search, setSearch] = useState("");
@@ -79,25 +85,60 @@ export function ClosedDealsTable({
             Lost ({lostCount})
           </Button>
         </div>
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search deals..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex items-center gap-2">
+          {/* View Toggle */}
+          <div className="flex items-center border rounded-md">
+            <Button
+              variant={viewMode === "list" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-2 rounded-r-none"
+              onClick={() => onViewModeChange("list")}
+              title="List View"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "grid" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-2 rounded-l-none"
+              onClick={() => onViewModeChange("grid")}
+              title="Grid View"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search deals..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Deals List */}
+      {/* Deals */}
       {filteredDeals.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             {search ? "No deals match your search" : "No closed deals yet"}
           </CardContent>
         </Card>
+      ) : viewMode === "grid" ? (
+        /* Grid View */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+          {filteredDeals.map((deal) => (
+            <ClosedDealCard
+              key={deal.id}
+              deal={deal}
+              onClick={() => onDealClick(deal)}
+            />
+          ))}
+        </div>
       ) : (
+        /* List View */
         <div className="space-y-2">
           {filteredDeals.map((deal) => {
             const isWon = deal.stage === "closed_won";

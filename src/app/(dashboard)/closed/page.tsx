@@ -10,10 +10,13 @@ import type { Deal, Contact } from "@/lib/db/schema";
 
 type DealWithContact = Deal & { contact: Contact | null };
 
+type ViewMode = "list" | "grid";
+
 export default function ClosedPage() {
   const [deals, setDeals] = useState<DealWithContact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "won" | "lost">("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedDeal, setSelectedDeal] = useState<DealWithContact | null>(null);
 
   // Fetch closed deals
@@ -116,7 +119,9 @@ export default function ClosedPage() {
           <ClosedDealsTable
             deals={deals}
             filter={filter}
+            viewMode={viewMode}
             onFilterChange={setFilter}
+            onViewModeChange={setViewMode}
             onDealClick={setSelectedDeal}
           />
         )}
