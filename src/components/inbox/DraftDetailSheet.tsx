@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Send, Save, Loader2, Mail } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { DRAFT_STATUSES } from "@/lib/constants/email-drafts";
 import type { DraftWithRelations } from "./DraftCard";
 import { OriginalEmailSection } from "./OriginalEmailSection";
@@ -79,78 +80,72 @@ export function DraftDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[800px] sm:max-w-[800px] overflow-y-auto pl-8">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Draft Response
-          </SheetTitle>
+      <SheetContent className="w-[600px] sm:max-w-[600px] overflow-y-auto px-4 py-3">
+        <SheetHeader className="pb-1">
+          <div className="flex items-center justify-between">
+            <SheetTitle className="flex items-center gap-1.5 text-sm">
+              <Mail className="h-3.5 w-3.5" />
+              Draft Response
+            </SheetTitle>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className={cn("text-xs py-0", status?.color)}>
+                {status?.label}
+              </Badge>
+              {draft.sentAt && (
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(draft.sentAt), "MMM d, h:mm a")}
+                </span>
+              )}
+            </div>
+          </div>
         </SheetHeader>
 
-        <div className="mt-6 space-y-6">
-          {/* Status Badge */}
-          <div className="flex items-center justify-between">
-            <Badge variant="secondary" className={status?.color}>
-              {status?.label}
-            </Badge>
-            {draft.sentAt && (
-              <span className="text-sm text-muted-foreground">
-                Sent: {format(new Date(draft.sentAt), "MMM d, h:mm a")}
-              </span>
-            )}
-          </div>
-
+        <div className="space-y-3 mt-2">
           <OriginalEmailSection draft={draft} />
 
-          <Separator />
-
           {/* Draft Response Section */}
-          <div className="space-y-3">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                Draft Response
+              <h3 className="font-medium text-xs text-muted-foreground uppercase tracking-wide">
+                Response
               </h3>
               {isPending && !isEditing && (
-                <Button variant="outline" size="sm" onClick={handleEdit}>
+                <Button variant="outline" size="sm" className="h-6 text-xs px-2" onClick={handleEdit}>
                   Edit
                 </Button>
               )}
             </div>
 
             {isEditing ? (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Subject</Label>
-                  <Input
-                    id="subject"
-                    value={editedSubject}
-                    onChange={(e) => setEditedSubject(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="body">Message</Label>
-                  <Textarea
-                    id="body"
-                    value={editedBody}
-                    onChange={(e) => setEditedBody(e.target.value)}
-                    rows={12}
-                    className="resize-none"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Input
+                  id="subject"
+                  placeholder="Subject"
+                  value={editedSubject}
+                  onChange={(e) => setEditedSubject(e.target.value)}
+                  className="h-7 text-sm"
+                />
+                <Textarea
+                  id="body"
+                  value={editedBody}
+                  onChange={(e) => setEditedBody(e.target.value)}
+                  rows={8}
+                  className="resize-none text-sm"
+                />
                 <div className="flex gap-2">
-                  <Button onClick={handleSave} disabled={isSaving}>
-                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    <Save className="mr-2 h-4 w-4" />
+                  <Button size="sm" className="h-7" onClick={handleSave} disabled={isSaving}>
+                    {isSaving && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                    <Save className="mr-1 h-3 w-3" />
                     Save
                   </Button>
-                  <Button variant="outline" onClick={() => setIsEditing(false)}>
+                  <Button variant="outline" size="sm" className="h-7" onClick={() => setIsEditing(false)}>
                     Cancel
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="bg-background border rounded-lg p-4 space-y-2">
-                <div className="font-medium">
+              <div className="bg-background border rounded p-2.5 space-y-1">
+                <div className="font-medium text-sm">
                   {draft.draftSubject || "(No subject)"}
                 </div>
                 <div className="text-sm whitespace-pre-wrap">{draft.draftBody}</div>
@@ -158,39 +153,33 @@ export function DraftDetailSheet({
             )}
           </div>
 
-          {/* Regenerate Section */}
+          {/* Regenerate + Send Row */}
           {isPending && !isEditing && (
-            <RegenerateSection
-              draftId={draft.id}
-              currentTone={draft.tone}
-              onRegenerate={onRegenerate}
-            />
-          )}
-
-          {/* Send Button */}
-          {isPending && !isEditing && (
-            <>
-              <Separator />
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleSend}
-                  disabled={isSending}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {isSending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="mr-2 h-4 w-4" />
-                  )}
-                  Send Email
-                </Button>
-              </div>
-            </>
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <RegenerateSection
+                draftId={draft.id}
+                currentTone={draft.tone}
+                onRegenerate={onRegenerate}
+              />
+              <Button
+                onClick={handleSend}
+                disabled={isSending}
+                size="sm"
+                className="h-7 bg-green-600 hover:bg-green-700"
+              >
+                {isSending ? (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                ) : (
+                  <Send className="mr-1 h-3 w-3" />
+                )}
+                Send
+              </Button>
+            </div>
           )}
 
           {/* Error Message */}
           {draft.errorMessage && (
-            <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg p-4 text-sm">
+            <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded p-2 text-xs">
               <strong>Error:</strong> {draft.errorMessage}
             </div>
           )}
