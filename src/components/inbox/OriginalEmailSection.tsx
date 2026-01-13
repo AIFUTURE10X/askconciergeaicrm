@@ -3,7 +3,7 @@
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, User, Building2, ExternalLink, Send, Briefcase } from "lucide-react";
+import { Calendar, User, Building2, ExternalLink, Send, Briefcase, MessageSquare, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getEnquiryTypeConfig } from "@/app/api/webhooks/inbound/constants";
 import type { DraftWithRelations } from "./DraftCard";
@@ -11,6 +11,17 @@ import type { DraftWithRelations } from "./DraftCard";
 interface OriginalEmailSectionProps {
   draft: DraftWithRelations;
 }
+
+// Stage labels for pipeline stages
+const STAGE_LABELS: Record<string, string> = {
+  lead: "Lead",
+  qualified: "Qualified",
+  demo_scheduled: "Demo Scheduled",
+  proposal: "Proposal",
+  negotiation: "Negotiation",
+};
+
+const getStageLabel = (stage: string) => STAGE_LABELS[stage] || stage;
 
 export function OriginalEmailSection({ draft }: OriginalEmailSectionProps) {
   // Check if this is an outreach email (no original email context)
@@ -55,11 +66,40 @@ export function OriginalEmailSection({ draft }: OriginalEmailSectionProps) {
                       {getEnquiryTypeConfig(draft.deal.enquiryType)!.label}
                     </Badge>
                   )}
+                  {draft.deal.stage && (
+                    <Badge variant="secondary" className="text-xs px-1.5 py-0 ml-1">
+                      {getStageLabel(draft.deal.stage)}
+                    </Badge>
+                  )}
                 </div>
               </>
             )}
           </div>
         </div>
+
+        {/* Original Inquiry Context */}
+        {draft.deal?.notes && (
+          <div className="space-y-2">
+            <h4 className="font-medium text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+              <MessageSquare className="h-3.5 w-3.5" />
+              Original Inquiry
+            </h4>
+            <div className="bg-muted/30 rounded-lg p-3">
+              <p className="text-sm whitespace-pre-wrap">
+                {draft.deal.notes}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Next Step */}
+        {draft.deal?.nextStep && (
+          <div className="flex items-center gap-2 text-sm">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">Next Step:</span>
+            <span className="text-muted-foreground">{draft.deal.nextStep}</span>
+          </div>
+        )}
 
         {/* Contact/Deal Info */}
         {(draft.contact || draft.deal) && (

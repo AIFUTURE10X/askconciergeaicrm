@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, User, Trash2, Briefcase } from "lucide-react";
+import { Mail, User, Trash2, Briefcase, MessageSquare } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { DRAFT_STATUSES, DRAFT_TONES } from "@/lib/constants/email-drafts";
@@ -111,6 +111,12 @@ export function DraftCard({
               <Briefcase className="h-2.5 w-2.5 flex-shrink-0" />
               <span className="truncate">{draft.deal.title}</span>
             </p>
+          )}
+          {draft.deal?.notes && (
+            <div className="flex gap-1">
+              <MessageSquare className="h-2.5 w-2.5 flex-shrink-0 mt-0.5" />
+              <span className="line-clamp-2">{draft.deal.notes}</span>
+            </div>
           )}
         </div>
 

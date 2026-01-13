@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Briefcase } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DRAFT_STATUSES } from "@/lib/constants/email-drafts";
 import { getEnquiryTypeConfig } from "@/app/api/webhooks/inbound/constants";
@@ -33,72 +33,53 @@ export function DraftListRow({
 
   return (
     <Card
-      className="cursor-pointer hover:bg-muted/50 transition-colors p-2"
+      className="cursor-pointer hover:bg-muted/50 transition-colors px-2 py-1.5"
       onClick={() => onSelect(draft)}
     >
-      {/* Checkbox + From + Date */}
-      <div className="flex items-center justify-between gap-1 mb-1">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {onToggleSelect && (
-            <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={() => onToggleSelect(draft.id)}
-                aria-label={`Select ${draft.originalFromName || draft.originalFromEmail}`}
-              />
-            </div>
-          )}
-          <p className="text-xs font-medium truncate flex-1">
-            {draft.originalFromName || draft.originalFromEmail?.split("@")[0]}
-          </p>
-        </div>
-        <span className="text-[10px] text-muted-foreground flex-shrink-0">
-          {draft.originalReceivedAt
-            ? format(new Date(draft.originalReceivedAt), "MMM d, h:mm a")
-            : ""}
+      {/* Row 1: Checkbox + Name + Enquiry Badge */}
+      <div className="flex items-center gap-1.5 mb-0.5">
+        {onToggleSelect && (
+          <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onToggleSelect(draft.id)}
+              aria-label={`Select ${draft.originalFromName || draft.originalFromEmail}`}
+              className="h-3 w-3"
+            />
+          </div>
+        )}
+        <span className="text-xs font-medium truncate">
+          {draft.originalFromName || draft.originalFromEmail?.split("@")[0]}
         </span>
+        {draft.deal?.enquiryType && getEnquiryTypeConfig(draft.deal.enquiryType) && (
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[8px] px-1 py-0 shrink-0 ml-auto",
+              getEnquiryTypeConfig(draft.deal.enquiryType)!.color
+            )}
+          >
+            {getEnquiryTypeConfig(draft.deal.enquiryType)!.label}
+          </Badge>
+        )}
       </div>
 
-      {/* Subject */}
-      <p className="text-[11px] truncate mb-1 text-muted-foreground">
-        {draft.originalSubject || draft.draftSubject || "(No subject)"}
+      {/* Row 2: Inquiry (what they want) - 2 lines */}
+      <p className="text-[10px] text-muted-foreground line-clamp-2 mb-0.5">
+        {draft.deal?.notes || draft.originalSubject || draft.draftSubject || "(No subject)"}
       </p>
 
-      {/* Deal Context (if from pipeline) */}
-      {draft.deal && (
-        <div className="flex items-center gap-1.5 mb-1">
-          {draft.deal.enquiryType && getEnquiryTypeConfig(draft.deal.enquiryType) && (
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[9px] px-1 py-0 shrink-0",
-                getEnquiryTypeConfig(draft.deal.enquiryType)!.color
-              )}
-            >
-              {getEnquiryTypeConfig(draft.deal.enquiryType)!.label}
-            </Badge>
-          )}
-          <span className="text-[10px] text-muted-foreground truncate flex items-center gap-1">
-            <Briefcase className="h-2.5 w-2.5 shrink-0" />
-            {draft.deal.title}
-          </span>
-        </div>
-      )}
-
-      {/* Status Badge + Actions */}
+      {/* Row 3: Status + Delete */}
       <div className="flex items-center justify-between">
-        <Badge variant="secondary" className={`text-[9px] px-1 py-0 ${status?.color}`}>
+        <Badge variant="secondary" className={`text-[8px] px-1 py-0 ${status?.color}`}>
           {status?.label}
         </Badge>
-
         {isPending && (
-          <div
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div onClick={(e) => e.stopPropagation()}>
             <Button
               variant="ghost"
               size="icon"
-              className="h-5 w-5 text-destructive hover:text-destructive"
+              className="h-4 w-4 text-destructive hover:text-destructive"
               onClick={() => onDelete(draft.id)}
               disabled={isDeleting}
               title="Delete"
