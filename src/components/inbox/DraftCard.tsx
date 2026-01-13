@@ -4,9 +4,11 @@ import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, User, Trash2 } from "lucide-react";
+import { Mail, User, Trash2, Briefcase } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 import { DRAFT_STATUSES, DRAFT_TONES } from "@/lib/constants/email-drafts";
+import { getEnquiryTypeConfig } from "@/app/api/webhooks/inbound/constants";
 import type { EmailDraft, Contact, Deal } from "@/lib/db/schema";
 
 export type DraftWithRelations = EmailDraft & {
@@ -64,7 +66,7 @@ export function DraftCard({
 
         {/* Subject */}
         <p className="text-xs font-medium truncate mb-1">
-          {draft.originalSubject || "(No subject)"}
+          {draft.originalSubject || draft.draftSubject || "(No subject)"}
         </p>
 
         {/* Draft Preview */}
@@ -80,9 +82,20 @@ export function DraftCard({
           <Badge variant="outline" className="text-[10px] px-1 py-0">
             {tone?.label}
           </Badge>
+          {draft.deal?.enquiryType && getEnquiryTypeConfig(draft.deal.enquiryType) && (
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[10px] px-1 py-0",
+                getEnquiryTypeConfig(draft.deal.enquiryType)!.color
+              )}
+            >
+              {getEnquiryTypeConfig(draft.deal.enquiryType)!.label}
+            </Badge>
+          )}
         </div>
 
-        {/* Meta: Date + Contact */}
+        {/* Meta: Date + Contact + Deal */}
         <div className="text-[10px] text-muted-foreground space-y-0.5 mb-1.5">
           {draft.originalReceivedAt && (
             <p>{format(new Date(draft.originalReceivedAt), "MMM d, h:mm a")}</p>
@@ -91,6 +104,12 @@ export function DraftCard({
             <p className="flex items-center gap-1 truncate">
               <User className="h-2.5 w-2.5 flex-shrink-0" />
               <span className="truncate">{draft.contact.name}</span>
+            </p>
+          )}
+          {draft.deal && (
+            <p className="flex items-center gap-1 truncate">
+              <Briefcase className="h-2.5 w-2.5 flex-shrink-0" />
+              <span className="truncate">{draft.deal.title}</span>
             </p>
           )}
         </div>

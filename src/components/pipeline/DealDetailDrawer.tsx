@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ export function DealDetailDrawer({
   onUpdate,
   onDelete,
 }: DealDetailDrawerProps) {
+  const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
@@ -44,6 +46,7 @@ export function DealDetailDrawer({
   const [isLostDialogOpen, setIsLostDialogOpen] = useState(false);
   const [activities, setActivities] = useState<ActivityWithRelations[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   // Next step editing state
   const [isEditingNextStep, setIsEditingNextStep] = useState(false);
@@ -197,6 +200,35 @@ export function DealDetailDrawer({
     setActivities((prev) => [activity, ...prev]);
   };
 
+  const handleGenerateAIResponse = async () => {
+    if (!deal.contact?.email) {
+      toast.error("Contact has no email address");
+      return;
+    }
+
+    setIsGeneratingAI(true);
+    try {
+      const res = await fetch(`/api/deals/${deal.id}/generate-draft`, {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to generate draft");
+      }
+
+      const { draftId } = await res.json();
+      toast.success("AI draft generated! Opening in Inbox...");
+      onOpenChange(false);
+      router.push(`/inbox?draft=${draftId}`);
+    } catch (error) {
+      console.error("Error generating AI draft:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to generate AI response");
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
@@ -236,6 +268,8 @@ export function DealDetailDrawer({
               <DealContactCard
                 contact={deal.contact}
                 onEmailClick={() => setIsEmailDialogOpen(true)}
+                onAIResponseClick={handleGenerateAIResponse}
+                isGeneratingAI={isGeneratingAI}
               />
             )}
 

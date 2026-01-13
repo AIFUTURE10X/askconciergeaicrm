@@ -2,7 +2,10 @@
 
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, User, Building2, ExternalLink } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, User, Building2, ExternalLink, Send, Briefcase } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { getEnquiryTypeConfig } from "@/app/api/webhooks/inbound/constants";
 import type { DraftWithRelations } from "./DraftCard";
 
 interface OriginalEmailSectionProps {
@@ -10,6 +13,85 @@ interface OriginalEmailSectionProps {
 }
 
 export function OriginalEmailSection({ draft }: OriginalEmailSectionProps) {
+  // Check if this is an outreach email (no original email context)
+  // Outreach emails have no originalSubject, no originalBody, and no gmailThreadId
+  const isOutreach = !draft.originalSubject && !draft.originalBody && !draft.gmailThreadId;
+
+  if (isOutreach) {
+    // Show recipient info for outreach emails
+    return (
+      <>
+        <div className="space-y-3">
+          <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+            <Send className="h-4 w-4 inline mr-1.5 -mt-0.5" />
+            Sending To
+          </h3>
+          <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-medium">To:</span>
+              <span>
+                {draft.originalFromName || draft.originalFromEmail}
+                {draft.originalFromName && (
+                  <span className="text-muted-foreground ml-1">
+                    &lt;{draft.originalFromEmail}&gt;
+                  </span>
+                )}
+              </span>
+            </div>
+            {draft.deal && (
+              <>
+                <Separator className="my-2" />
+                <div className="flex items-center gap-2 text-sm">
+                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">{draft.deal.title}</span>
+                  {draft.deal.enquiryType && getEnquiryTypeConfig(draft.deal.enquiryType) && (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-xs px-1.5 py-0 ml-1",
+                        getEnquiryTypeConfig(draft.deal.enquiryType)!.color
+                      )}
+                    >
+                      {getEnquiryTypeConfig(draft.deal.enquiryType)!.label}
+                    </Badge>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Contact/Deal Info */}
+        {(draft.contact || draft.deal) && (
+          <div className="flex flex-wrap gap-4">
+            {draft.contact && (
+              <div className="flex items-center gap-2 text-sm">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span>{draft.contact.name}</span>
+                {draft.contact.company && (
+                  <>
+                    <Building2 className="h-4 w-4 text-muted-foreground ml-2" />
+                    <span>{draft.contact.company}</span>
+                  </>
+                )}
+              </div>
+            )}
+            {draft.deal && (
+              <a
+                href={`/pipeline?deal=${draft.deal.id}`}
+                className="flex items-center gap-1 text-sm text-primary hover:underline"
+              >
+                <ExternalLink className="h-3 w-3" />
+                View Deal
+              </a>
+            )}
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // Show original email info for reply emails
   return (
     <>
       <div className="space-y-3">

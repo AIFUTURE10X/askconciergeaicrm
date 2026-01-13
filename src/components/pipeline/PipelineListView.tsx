@@ -59,7 +59,7 @@ export function PipelineListView({
                 "h-2 w-2 rounded-full",
                 stage.id === "lead" && "bg-gray-400",
                 stage.id === "qualified" && "bg-yellow-500",
-                stage.id === "demo" && "bg-blue-500",
+                stage.id === "demo_scheduled" && "bg-blue-500",
                 stage.id === "proposal" && "bg-orange-500",
                 stage.id === "negotiation" && "bg-purple-500"
               )}

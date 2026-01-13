@@ -5,8 +5,10 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2 } from "lucide-react";
+import { Trash2, Briefcase } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { DRAFT_STATUSES } from "@/lib/constants/email-drafts";
+import { getEnquiryTypeConfig } from "@/app/api/webhooks/inbound/constants";
 import type { DraftWithRelations } from "./DraftCard";
 
 interface DraftListRowProps {
@@ -59,8 +61,29 @@ export function DraftListRow({
 
       {/* Subject */}
       <p className="text-[11px] truncate mb-1 text-muted-foreground">
-        {draft.originalSubject || "(No subject)"}
+        {draft.originalSubject || draft.draftSubject || "(No subject)"}
       </p>
+
+      {/* Deal Context (if from pipeline) */}
+      {draft.deal && (
+        <div className="flex items-center gap-1.5 mb-1">
+          {draft.deal.enquiryType && getEnquiryTypeConfig(draft.deal.enquiryType) && (
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[9px] px-1 py-0 shrink-0",
+                getEnquiryTypeConfig(draft.deal.enquiryType)!.color
+              )}
+            >
+              {getEnquiryTypeConfig(draft.deal.enquiryType)!.label}
+            </Badge>
+          )}
+          <span className="text-[10px] text-muted-foreground truncate flex items-center gap-1">
+            <Briefcase className="h-2.5 w-2.5 shrink-0" />
+            {draft.deal.title}
+          </span>
+        </div>
+      )}
 
       {/* Status Badge + Actions */}
       <div className="flex items-center justify-between">
