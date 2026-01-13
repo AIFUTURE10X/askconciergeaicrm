@@ -12,6 +12,20 @@ import {
 } from "drizzle-orm/pg-core";
 
 // ============================================
+// TAGS (Contact categorization)
+// ============================================
+export const tags = pgTable(
+  "tags",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 50 }).notNull(),
+    color: varchar("color", { length: 20 }).notNull().default("gray"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("tags_name_idx").on(table.name)]
+);
+
+// ============================================
 // CONTACTS (Companies or Individuals)
 // ============================================
 export const contacts = pgTable(

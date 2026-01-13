@@ -1,5 +1,6 @@
 // Re-export all tables
 export {
+  tags,
   contacts,
   deals,
   activities,
@@ -23,6 +24,7 @@ export {
 
 // Import tables for type inference
 import {
+  tags,
   contacts,
   deals,
   activities,
@@ -34,6 +36,8 @@ import {
 } from "./tables";
 
 // Type exports
+export type Tag = typeof tags.$inferSelect;
+export type NewTag = typeof tags.$inferInsert;
 export type Contact = typeof contacts.$inferSelect;
 export type NewContact = typeof contacts.$inferInsert;
 export type Deal = typeof deals.$inferSelect;

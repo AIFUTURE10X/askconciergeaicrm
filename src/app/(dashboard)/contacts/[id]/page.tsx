@@ -154,6 +154,9 @@ export default function ContactDetailPage() {
               contact={contact}
               onEmailClick={() => setIsEmailDialogOpen(true)}
               onLogActivity={() => setIsActivityDialogOpen(true)}
+              onContactUpdate={(updatedContact) => {
+                setContact((prev) => prev ? { ...prev, ...updatedContact } : null);
+              }}
             />
             <DealSummaryCard deals={contact.deals} />
           </div>

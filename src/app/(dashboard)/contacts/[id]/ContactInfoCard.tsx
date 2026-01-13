@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,14 +15,17 @@ import {
   MapPin,
   Plus,
   ExternalLink,
+  Pencil,
 } from "lucide-react";
 import { PROPERTY_TYPES, SOURCES } from "@/lib/constants/pipeline";
+import { EditContactDialog } from "./EditContactDialog";
 import type { Contact } from "@/lib/db/schema";
 
 interface ContactInfoCardProps {
   contact: Contact;
   onEmailClick: () => void;
   onLogActivity: () => void;
+  onContactUpdate?: (updatedContact: Contact) => void;
 }
 
 function getInitials(name: string) {
@@ -33,11 +37,24 @@ function getInitials(name: string) {
     .slice(0, 2);
 }
 
-export function ContactInfoCard({ contact, onEmailClick, onLogActivity }: ContactInfoCardProps) {
+export function ContactInfoCard({
+  contact,
+  onEmailClick,
+  onLogActivity,
+  onContactUpdate,
+}: ContactInfoCardProps) {
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const propertyType = PROPERTY_TYPES.find((t) => t.id === contact.propertyType);
   const source = SOURCES.find((s) => s.id === contact.source);
 
+  const handleSave = (updatedContact: Contact) => {
+    if (onContactUpdate) {
+      onContactUpdate(updatedContact);
+    }
+  };
+
   return (
+    <>
     <Card>
       <CardContent className="p-3">
         <div className="flex items-center gap-3">
@@ -59,6 +76,14 @@ export function ContactInfoCard({ contact, onEmailClick, onLogActivity }: Contac
               </Badge>
             )}
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 flex-shrink-0"
+            onClick={() => setIsEditDialogOpen(true)}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
         </div>
 
         <Separator className="my-2" />
@@ -161,5 +186,13 @@ export function ContactInfoCard({ contact, onEmailClick, onLogActivity }: Contac
         </div>
       </CardContent>
     </Card>
+
+    <EditContactDialog
+      open={isEditDialogOpen}
+      onOpenChange={setIsEditDialogOpen}
+      contact={contact}
+      onSave={handleSave}
+    />
+    </>
   );
 }
