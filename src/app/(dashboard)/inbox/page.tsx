@@ -299,7 +299,7 @@ function InboxContent() {
 
       <Header title="Inbox" description={`${pendingCount} pending drafts to review`} />
 
-      <div className="p-6 space-y-4">
+      <div className="p-3 sm:p-4 md:p-6 space-y-4">
         <InboxToolbar
           filter={filter}
           viewMode={viewMode}
@@ -326,7 +326,7 @@ function InboxContent() {
         {drafts.length === 0 ? (
           <InboxEmptyState filter={filter} />
         ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
             {drafts.map((draft) => (
               <DraftCard
                 key={draft.id}
@@ -340,7 +340,7 @@ function InboxContent() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
             {drafts.map((draft) => (
               <DraftListRow
                 key={draft.id}

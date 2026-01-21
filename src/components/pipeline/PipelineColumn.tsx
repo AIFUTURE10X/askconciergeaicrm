@@ -35,7 +35,7 @@ export function PipelineColumn({
   return (
     <div className={cn(
       "flex flex-col bg-muted/50 rounded-lg",
-      compact ? "w-56 min-w-56" : "w-72 min-w-72"
+      compact ? "w-48 md:w-56 min-w-48 md:min-w-56" : "w-64 md:w-72 min-w-64 md:min-w-72"
     )}>
       {/* Column Header */}
       <div className={cn("px-3 py-2 rounded-t-lg border-b", stage.color)}>

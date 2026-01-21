@@ -232,7 +232,7 @@ export function DealDetailDrawer({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="w-[500px] sm:w-[560px] overflow-y-auto bg-background px-6">
+        <SheetContent className="w-full sm:w-[500px] md:w-[560px] overflow-y-auto bg-background px-4 sm:px-6">
           <SheetHeader className="pb-4">
             <SheetTitle className="text-left pr-8">{deal.title}</SheetTitle>
           </SheetHeader>

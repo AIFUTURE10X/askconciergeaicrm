@@ -64,13 +64,14 @@ export function InboxToolbar({
   onSearchChange,
 }: InboxToolbarProps) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 sm:space-y-3">
       {/* Row 1: Select All, Status Tabs, Search, Actions */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        {/* Left side: Select + Status */}
+        <div className="flex items-center gap-2 sm:gap-4">
           {/* Select All */}
           {totalCount > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <Checkbox
                 checked={allSelected}
                 ref={(el) => {
@@ -81,18 +82,22 @@ export function InboxToolbar({
                 onCheckedChange={onToggleSelectAll}
                 aria-label="Select all"
               />
-              <span className="text-sm text-muted-foreground">
-                {selectedCount > 0 ? `${selectedCount} selected` : "Select all"}
+              <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                {selectedCount > 0 ? `${selectedCount}` : null}
+                <span className="hidden sm:inline">
+                  {selectedCount > 0 ? " selected" : "Select all"}
+                </span>
               </span>
             </div>
           )}
 
           {/* Status Filter Tabs */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 sm:gap-1">
             <Button
               variant={filter === "pending" ? "default" : "outline"}
               size="sm"
               onClick={() => onFilterChange("pending")}
+              className="h-7 px-2 text-xs sm:h-8 sm:px-3 sm:text-sm"
             >
               Pending
             </Button>
@@ -100,6 +105,7 @@ export function InboxToolbar({
               variant={filter === "sent" ? "default" : "outline"}
               size="sm"
               onClick={() => onFilterChange("sent")}
+              className="h-7 px-2 text-xs sm:h-8 sm:px-3 sm:text-sm"
             >
               Sent
             </Button>
@@ -107,21 +113,23 @@ export function InboxToolbar({
               variant={filter === "all" ? "default" : "outline"}
               size="sm"
               onClick={() => onFilterChange("all")}
+              className="h-7 px-2 text-xs sm:h-8 sm:px-3 sm:text-sm"
             >
               All
             </Button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Search Input */}
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        {/* Right side: Search + Actions */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Search Input - full width on mobile */}
+          <div className="relative flex-1 sm:flex-none">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
             <Input
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-48 pl-9 h-9"
+              className="w-full sm:w-48 pl-7 sm:pl-9 h-8 sm:h-9 text-sm"
             />
           </div>
 
@@ -131,6 +139,7 @@ export function InboxToolbar({
             size="sm"
             onClick={onSyncNow}
             disabled={isSyncing}
+            className="h-8 px-2 sm:px-3"
           >
             {isSyncing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -144,6 +153,7 @@ export function InboxToolbar({
             size="sm"
             onClick={onRefresh}
             disabled={isRefreshing}
+            className="h-8 px-2"
           >
             {isRefreshing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -155,9 +165,9 @@ export function InboxToolbar({
       </div>
 
       {/* Row 2: Enquiry Type Tabs, View Toggle, Bulk Actions */}
-      <div className="flex items-center justify-between">
-        {/* Enquiry Type Tabs */}
-        <div className="flex items-center gap-1">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        {/* Enquiry Type Tabs - scrollable on mobile */}
+        <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto pb-1 sm:pb-0 -mx-1 px-1 sm:mx-0 sm:px-0">
           {ENQUIRY_FILTERS.map((type) => (
             <Button
               key={type.id}
@@ -165,7 +175,7 @@ export function InboxToolbar({
               size="sm"
               onClick={() => onEnquiryTypeChange(type.id)}
               className={cn(
-                "h-7 text-xs",
+                "h-6 px-2 text-xs sm:h-7 sm:px-2.5 whitespace-nowrap flex-shrink-0",
                 enquiryType !== type.id && type.color
               )}
             >
@@ -174,7 +184,7 @@ export function InboxToolbar({
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           {/* Bulk Delete (when selected) */}
           {selectedCount > 0 && (
             <div className="flex items-center gap-1">
@@ -183,15 +193,21 @@ export function InboxToolbar({
                 size="sm"
                 onClick={onBulkDelete}
                 disabled={isBulkDeleting}
+                className="h-7 px-2 text-xs sm:h-8 sm:px-3 sm:text-sm"
               >
                 {isBulkDeleting ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
                 ) : (
-                  <Trash2 className="h-4 w-4 mr-1" />
+                  <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 )}
-                Delete {selectedCount}
+                <span className="ml-1">{selectedCount}</span>
               </Button>
-              <Button variant="ghost" size="sm" onClick={onCancelSelection}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onCancelSelection}
+                className="h-7 px-2 text-xs sm:h-8 sm:px-3 sm:text-sm"
+              >
                 Cancel
               </Button>
             </div>
@@ -202,20 +218,20 @@ export function InboxToolbar({
             <Button
               variant={viewMode === "list" ? "secondary" : "ghost"}
               size="sm"
-              className="h-8 px-2 rounded-r-none"
+              className="h-7 px-1.5 sm:h-8 sm:px-2 rounded-r-none"
               onClick={() => onViewModeChange("list")}
               title="List View"
             >
-              <List className="h-4 w-4" />
+              <List className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
             <Button
               variant={viewMode === "grid" ? "secondary" : "ghost"}
               size="sm"
-              className="h-8 px-2 rounded-l-none"
+              className="h-7 px-1.5 sm:h-8 sm:px-2 rounded-l-none"
               onClick={() => onViewModeChange("grid")}
               title="Grid View"
             >
-              <LayoutGrid className="h-4 w-4" />
+              <LayoutGrid className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
           </div>
         </div>

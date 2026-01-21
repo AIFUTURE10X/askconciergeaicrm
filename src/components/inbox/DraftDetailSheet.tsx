@@ -80,7 +80,7 @@ export function DraftDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[600px] sm:max-w-[600px] overflow-y-auto px-4 py-3">
+      <SheetContent className="w-full sm:w-[500px] md:w-[600px] overflow-y-auto px-3 sm:px-4 py-3">
         <SheetHeader className="pb-1">
           <div className="flex items-center justify-between">
             <SheetTitle className="flex items-center gap-1.5 text-sm">

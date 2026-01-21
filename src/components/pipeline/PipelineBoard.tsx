@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Loader2, Download, Trash2, LayoutGrid, List } from "lucide-react";
 import { ACTIVE_STAGES } from "@/lib/constants/pipeline";
 import { exportDealsToCSV } from "./pipeline-utils";
+import { useIsMobile } from "@/hooks/useMediaQuery";
 import type { Deal, Contact } from "@/lib/db/schema";
 
 type DealWithContact = Deal & { contact: Contact | null };
@@ -27,6 +28,10 @@ export function PipelineBoard() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [viewMode, setViewMode] = useState<"board" | "list">("board");
+  const isMobile = useIsMobile();
+
+  // On mobile, always use list view (compact)
+  const effectiveViewMode = isMobile ? "list" : viewMode;
 
   const fetchData = useCallback(async () => {
     try {
@@ -210,26 +215,27 @@ export function PipelineBoard() {
         action={{ label: "Add Deal", onClick: () => setIsAddDialogOpen(true) }}
       />
 
-      <div className="px-6 pt-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="px-3 sm:px-6 pt-2 flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {activeDeals.length > 0 && (
             <Button
               variant={selectionMode ? "default" : "outline"}
               size="sm"
               onClick={toggleSelectionMode}
+              className="touch-manipulation"
             >
               {selectionMode ? "Cancel" : "Select"}
             </Button>
           )}
           {selectionMode && (
             <>
-              <div className="flex items-center gap-2 ml-2">
+              <div className="flex items-center gap-2">
                 <Checkbox
                   checked={selectedDeals.size === activeDeals.length && activeDeals.length > 0}
                   onCheckedChange={handleSelectAll}
                 />
-                <span className="text-sm text-muted-foreground">
-                  Select All ({selectedDeals.size}/{activeDeals.length})
+                <span className="text-xs sm:text-sm text-muted-foreground">
+                  {selectedDeals.size}/{activeDeals.length}
                 </span>
               </div>
               <Button
@@ -237,49 +243,52 @@ export function PipelineBoard() {
                 size="sm"
                 onClick={handleBulkDelete}
                 disabled={selectedDeals.size === 0 || isDeleting}
+                className="touch-manipulation"
               >
                 {isDeleting ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-1 sm:mr-2 animate-spin" />
                 ) : (
-                  <Trash2 className="h-4 w-4 mr-2" />
+                  <Trash2 className="h-4 w-4 mr-1 sm:mr-2" />
                 )}
-                Delete ({selectedDeals.size})
+                <span className="hidden sm:inline">Delete </span>({selectedDeals.size})
               </Button>
             </>
           )}
         </div>
         <div className="flex items-center gap-2">
-          {/* View Toggle */}
-          <div className="flex items-center border rounded-md">
-            <Button
-              variant={viewMode === "board" ? "default" : "ghost"}
-              size="sm"
-              className="rounded-r-none px-2.5"
-              onClick={() => setViewMode("board")}
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="sm"
-              className="rounded-l-none px-2.5"
-              onClick={() => setViewMode("list")}
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
+          {/* View Toggle - hidden on mobile (forced to list view) */}
+          {!isMobile && (
+            <div className="flex items-center border rounded-md">
+              <Button
+                variant={viewMode === "board" ? "default" : "ghost"}
+                size="sm"
+                className="rounded-r-none px-2.5"
+                onClick={() => setViewMode("board")}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                className="rounded-l-none px-2.5"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
           {activeDeals.length > 0 && !selectionMode && (
-            <Button variant="outline" size="sm" onClick={handleExport}>
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
+            <Button variant="outline" size="sm" onClick={handleExport} className="touch-manipulation">
+              <Download className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Export CSV</span>
             </Button>
           )}
         </div>
       </div>
 
-      <div className="p-6 pt-4">
+      <div className="p-3 sm:p-6 pt-4">
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex gap-4 overflow-x-auto pb-4">
+          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4">
             {ACTIVE_STAGES.map((stage) => (
               <PipelineColumn
                 key={stage.id}
@@ -289,7 +298,7 @@ export function PipelineBoard() {
                 selectedDeals={selectedDeals}
                 onSelectDeal={handleSelectDeal}
                 selectionMode={selectionMode}
-                compact={viewMode === "list"}
+                compact={effectiveViewMode === "list"}
               />
             ))}
           </div>

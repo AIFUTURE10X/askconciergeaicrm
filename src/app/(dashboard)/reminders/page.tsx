@@ -178,7 +178,7 @@ export default function RemindersPage() {
         action={{ label: "Add Reminder", onClick: () => setIsAddDialogOpen(true) }}
       />
 
-      <div className="p-6 space-y-4">
+      <div className="p-3 sm:p-4 md:p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Button
             variant={showCompleted ? "outline" : "default"}
@@ -215,7 +215,7 @@ export default function RemindersPage() {
                     {isOverdue && <AlertCircle className="h-4 w-4" />}
                     {getDateLabel(date)}
                   </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
                     {dateReminders.map((reminder) => (
                       <ReminderCard
                         key={reminder.id}
