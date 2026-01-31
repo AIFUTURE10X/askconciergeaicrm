@@ -140,3 +140,81 @@ export const crmSubscriptions = pgTable("crm_subscriptions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// ============================================
+// READ-ONLY: Chat Sessions (Guest engagement)
+// ============================================
+export const chatSessions = pgTable(
+  "chat_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    propertyId: uuid("property_id").notNull(),
+    startedAt: timestamp("started_at").defaultNow().notNull(),
+    endedAt: timestamp("ended_at"),
+    messageCount: integer("message_count").default(0),
+  },
+  (table) => [index("chat_sessions_property_idx").on(table.propertyId)]
+);
+
+// ============================================
+// READ-ONLY: Content Sections
+// ============================================
+export const contentSections = pgTable(
+  "content_sections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    propertyId: uuid("property_id").notNull(),
+    sectionType: varchar("section_type", { length: 50 }).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    isVisible: boolean("is_visible").default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("content_sections_property_idx").on(table.propertyId)]
+);
+
+// ============================================
+// READ-ONLY: FAQs
+// ============================================
+export const faqs = pgTable(
+  "faqs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    propertyId: uuid("property_id").notNull(),
+    question: text("question").notNull(),
+    answer: text("answer").notNull(),
+    isVisible: boolean("is_visible").default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("faqs_property_idx").on(table.propertyId)]
+);
+
+// ============================================
+// READ-ONLY: Access Tokens (QR codes / guest links)
+// ============================================
+export const accessTokens = pgTable(
+  "access_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    propertyId: uuid("property_id").notNull(),
+    token: varchar("token", { length: 100 }).unique().notNull(),
+    isActive: boolean("is_active").default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("access_tokens_property_idx").on(table.propertyId)]
+);
+
+// ============================================
+// READ-ONLY: Tickets (Support)
+// ============================================
+export const tickets = pgTable(
+  "tickets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    propertyId: uuid("property_id").notNull(),
+    status: varchar("status", { length: 50 }).notNull().default("open"),
+    priority: varchar("priority", { length: 20 }).notNull().default("medium"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    resolvedAt: timestamp("resolved_at"),
+  },
+  (table) => [index("tickets_property_idx").on(table.propertyId)]
+);

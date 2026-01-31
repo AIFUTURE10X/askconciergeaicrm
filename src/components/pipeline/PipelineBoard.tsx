@@ -288,7 +288,7 @@ export function PipelineBoard() {
 
       <div className="p-3 sm:p-6 pt-4">
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4">
+          <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-4">
             {ACTIVE_STAGES.map((stage) => (
               <PipelineColumn
                 key={stage.id}

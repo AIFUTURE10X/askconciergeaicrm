@@ -9,6 +9,7 @@ import {
   decimal,
   jsonb,
   index,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 
 // ============================================
@@ -289,5 +290,33 @@ export const emailDrafts = pgTable(
     index("email_drafts_contact_idx").on(table.contactId),
     index("email_drafts_deal_idx").on(table.dealId),
     index("email_drafts_created_idx").on(table.createdAt),
+  ]
+);
+
+// ============================================
+// CHURN REASONS (Why customers canceled)
+// ============================================
+export const churnReasonEnum = pgEnum("churn_reason_type", [
+  "pricing",
+  "not_using",
+  "competitor",
+  "missing_features",
+  "support",
+  "other",
+]);
+
+export const churnReasons = pgTable(
+  "churn_reasons",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id").notNull(),
+    reason: churnReasonEnum("reason").notNull(),
+    details: text("details"),
+    healthScoreAtChurn: integer("health_score_at_churn"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("churn_reasons_org_idx").on(table.organizationId),
+    index("churn_reasons_reason_idx").on(table.reason),
   ]
 );

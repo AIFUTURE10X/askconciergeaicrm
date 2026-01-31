@@ -15,6 +15,7 @@ import {
   ChevronRight,
   X,
   Building2,
+  HeartPulse,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useSidebar } from "@/components/layout/SidebarContext";
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/closed", label: "Closed", icon: Archive },
   { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/customers", label: "Customers", icon: Building2 },
+  { href: "/health", label: "Health", icon: HeartPulse },
   { href: "/reminders", label: "Reminders", icon: Bell },
 ];
 

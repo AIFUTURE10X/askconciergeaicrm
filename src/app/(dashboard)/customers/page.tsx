@@ -37,6 +37,8 @@ import type { AdminOrganization, AdminStats } from "@/lib/admin/types";
 import { CustomerDetailPanel } from "@/components/customers/CustomerDetailPanel";
 import { CustomerBulkActions } from "@/components/customers/CustomerBulkActions";
 import { Checkbox } from "@/components/ui/checkbox";
+import { HealthBadge } from "@/components/customers/health/HealthBadge";
+import type { CustomerHealthData } from "@/lib/admin/health";
 
 function StatCard({
   label,
@@ -78,6 +80,9 @@ export default function CustomersPage() {
   // Sort
   const [sort, setSort] = useState("createdAt");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
+
+  // Health scores
+  const [healthMap, setHealthMap] = useState<Map<string, number>>(new Map());
 
   // Detail panel
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
@@ -146,6 +151,22 @@ export default function CustomersPage() {
     fetchStats();
   }, [fetchCustomers, fetchStats]);
 
+  const fetchHealthScores = useCallback(async () => {
+    try {
+      const res = await fetch("/api/customers/health?sort=score&order=asc");
+      if (res.ok) {
+        const data = await res.json();
+        const map = new Map<string, number>();
+        for (const c of data.customers as CustomerHealthData[]) {
+          map.set(c.orgId, c.breakdown.total);
+        }
+        setHealthMap(map);
+      }
+    } catch (error) {
+      console.error("Error fetching health scores:", error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchCustomers();
   }, [fetchCustomers]);
@@ -153,6 +174,10 @@ export default function CustomersPage() {
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
+
+  useEffect(() => {
+    fetchHealthScores();
+  }, [fetchHealthScores]);
 
   // Reset to page 1 when filters change
   const handleSearch = (value: string) => {
@@ -302,6 +327,7 @@ export default function CustomersPage() {
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Owner</th>
                     <SortHeader label="Tier" column="tier" sort={sort} order={order} onSort={toggleSort} />
                     <SortHeader label="Status" column="status" sort={sort} order={order} onSort={toggleSort} />
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Health</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Properties</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Members</th>
                     <SortHeader label="Created" column="createdAt" sort={sort} order={order} onSort={toggleSort} />
@@ -343,6 +369,13 @@ export default function CustomersPage() {
                         <Badge variant="secondary" className={cn("text-xs", STATUS_COLORS[org.subscriptionStatus || "trialing"])}>
                           {STATUS_LABELS[org.subscriptionStatus || "trialing"] || org.subscriptionStatus}
                         </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        {healthMap.has(org.id) ? (
+                          <HealthBadge score={healthMap.get(org.id)!} />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">{org.propertyCount}</td>
                       <td className="px-4 py-3 text-muted-foreground">{org.memberCount}</td>

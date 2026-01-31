@@ -9,6 +9,8 @@ export {
   gmailAccounts,
   processedEmails,
   emailDrafts,
+  churnReasonEnum,
+  churnReasons,
 } from "./tables";
 
 // Re-export all relations
@@ -33,6 +35,7 @@ import {
   gmailAccounts,
   processedEmails,
   emailDrafts,
+  churnReasons,
 } from "./tables";
 
 // Type exports
@@ -52,3 +55,5 @@ export type NewGmailAccount = typeof gmailAccounts.$inferInsert;
 export type ProcessedEmail = typeof processedEmails.$inferSelect;
 export type EmailDraft = typeof emailDrafts.$inferSelect;
 export type NewEmailDraft = typeof emailDrafts.$inferInsert;
+export type ChurnReason = typeof churnReasons.$inferSelect;
+export type NewChurnReason = typeof churnReasons.$inferInsert;

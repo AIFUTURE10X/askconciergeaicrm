@@ -14,6 +14,7 @@ import {
   VALID_TIERS,
 } from "@/lib/admin/constants";
 import type { AdminOrgDetail } from "@/lib/admin/types";
+import { ChurnReasonDialog } from "@/components/customers/renewals/ChurnReasonDialog";
 
 interface Props {
   org: AdminOrgDetail;
@@ -25,6 +26,7 @@ export function CustomerActionsTab({ org, onRefresh }: Props) {
   const [isExtendingTrial, setIsExtendingTrial] = useState(false);
   const [trialDays, setTrialDays] = useState("14");
   const [isCanceling, setIsCanceling] = useState(false);
+  const [showChurnDialog, setShowChurnDialog] = useState(false);
 
   // Inline edit states
   const [editName, setEditName] = useState(false);
@@ -116,6 +118,7 @@ export function CustomerActionsTab({ org, onRefresh }: Props) {
     try {
       await patchOrg({ action: "cancelSubscription" });
       toast.success("Subscription marked as canceled");
+      setShowChurnDialog(true);
       await onRefresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to cancel");
@@ -283,6 +286,25 @@ export function CustomerActionsTab({ org, onRefresh }: Props) {
             Mark as Canceled
           </Button>
         </Card>
+      )}
+
+      {/* Log churn reason for already-canceled orgs */}
+      {org.subscriptionStatus === "canceled" && (
+        <Card className="p-4 space-y-3">
+          <h3 className="font-medium">Log Churn Reason</h3>
+          <p className="text-xs text-muted-foreground">Record why this customer canceled for analytics.</p>
+          <Button size="sm" variant="outline" onClick={() => setShowChurnDialog(true)}>
+            Log Reason
+          </Button>
+        </Card>
+      )}
+
+      {showChurnDialog && (
+        <ChurnReasonDialog
+          orgId={org.id}
+          orgName={org.name}
+          onClose={() => setShowChurnDialog(false)}
+        />
       )}
     </div>
   );

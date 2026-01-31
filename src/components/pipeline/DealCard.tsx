@@ -143,7 +143,7 @@ export function DealCard({ deal, onClick, isSelected, onSelectChange, selectionM
       )}
       onClick={selectionMode ? undefined : onClick}
     >
-      <CardContent className="p-3 space-y-3">
+      <CardContent className="p-2.5 space-y-2">
         {/* Selection Checkbox */}
         {selectionMode && (
           <div
@@ -193,7 +193,7 @@ export function DealCard({ deal, onClick, isSelected, onSelectChange, selectionM
         )}
 
         {/* Title */}
-        <div className="font-medium text-sm line-clamp-2">{deal.title}</div>
+        <div className="font-medium text-xs line-clamp-2">{deal.title}</div>
 
         {/* Enquiry Type Badge */}
         {deal.enquiryType && getEnquiryTypeConfig(deal.enquiryType) && (
@@ -207,13 +207,13 @@ export function DealCard({ deal, onClick, isSelected, onSelectChange, selectionM
 
         {/* Contact */}
         {deal.contact && (
-          <div className="flex items-center gap-2">
-            <Avatar className="h-6 w-6">
-              <AvatarFallback className="text-xs bg-primary/10 text-primary">
+          <div className="flex items-center gap-1.5">
+            <Avatar className="h-5 w-5 shrink-0">
+              <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
                 {getInitials(deal.contact.name)}
               </AvatarFallback>
             </Avatar>
-            <span className="text-xs text-muted-foreground truncate">
+            <span className="text-[11px] text-muted-foreground truncate">
               {deal.contact.name}
             </span>
           </div>
@@ -255,30 +255,30 @@ export function DealCard({ deal, onClick, isSelected, onSelectChange, selectionM
 
         {/* Last Contacted */}
         {deal.lastContactedAt && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>Last contact: {format(new Date(deal.lastContactedAt), "MMM d, h:mm a")}</span>
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Clock className="h-3 w-3 shrink-0" />
+            <span className="truncate">Last: {format(new Date(deal.lastContactedAt), "MMM d, h:mm a")}</span>
           </div>
         )}
 
         {/* Probability */}
-        <div className="flex items-center gap-2">
-          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+        <div className="flex items-center gap-1.5">
+          <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
             <div
               className="h-full bg-primary transition-all"
               style={{ width: `${deal.probability || 0}%` }}
             />
           </div>
-          <span className="text-xs text-muted-foreground w-8 text-right">
+          <span className="text-[11px] text-muted-foreground w-7 text-right">
             {deal.probability}%
           </span>
         </div>
 
         {/* Next Step & Follow-up (if not overdue/today, show normally) */}
         {!isWon && !isLost && (deal.nextStep || (hasFollowUp && !isOverdue && !isDueToday)) && (
-          <div className="pt-2 border-t space-y-1">
+          <div className="pt-1.5 border-t space-y-1">
             {deal.nextStep && (
-              <p className="text-xs text-muted-foreground line-clamp-1">
+              <p className="text-[11px] text-muted-foreground line-clamp-1">
                 <span className="font-medium text-foreground">Next:</span>{" "}
                 <Linkify>{deal.nextStep}</Linkify>
               </p>

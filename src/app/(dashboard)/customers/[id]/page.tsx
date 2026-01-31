@@ -13,9 +13,11 @@ import { CustomerSubscriptionTab } from "@/components/customers/tabs/CustomerSub
 import { CustomerUsageTab } from "@/components/customers/tabs/CustomerUsageTab";
 import { CustomerMembersTab } from "@/components/customers/tabs/CustomerMembersTab";
 import { CustomerActionsTab } from "@/components/customers/tabs/CustomerActionsTab";
+import { CustomerHealthTab } from "@/components/customers/health/CustomerHealthTab";
 
 const TABS = [
   { id: "overview", label: "Overview" },
+  { id: "health", label: "Health" },
   { id: "subscription", label: "Subscription" },
   { id: "usage", label: "Usage" },
   { id: "members", label: "Members" },
@@ -125,6 +127,7 @@ export default function CustomerDetailPage() {
 
         {/* Tab content */}
         {activeTab === "overview" && <CustomerOverviewTab org={org} />}
+        {activeTab === "health" && <CustomerHealthTab orgId={org.id} />}
         {activeTab === "subscription" && <CustomerSubscriptionTab org={org} />}
         {activeTab === "usage" && <CustomerUsageTab org={org} usage={usage} />}
         {activeTab === "members" && <CustomerMembersTab members={members} />}
