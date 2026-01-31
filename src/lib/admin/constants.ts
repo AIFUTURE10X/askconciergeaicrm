@@ -1,8 +1,8 @@
 export const TIER_PRICING: Record<string, { monthly: number; annual: number }> = {
-  ruby: { monthly: 29, annual: 290 },
+  ruby: { monthly: 18, annual: 180 },
   sapphire: { monthly: 59, annual: 590 },
-  emerald: { monthly: 129, annual: 1290 },
-  diamond: { monthly: 299, annual: 2990 },
+  emerald: { monthly: 199, annual: 1990 },
+  diamond: { monthly: 349, annual: 3490 },
 };
 
 export const TIER_LIMITS: Record<string, { properties: number; messages: number; units: number }> = {
@@ -14,9 +14,9 @@ export const TIER_LIMITS: Record<string, { properties: number; messages: number;
 
 export const TIER_LABELS: Record<string, string> = {
   ruby: "Ruby Studio",
-  sapphire: "Sapphire Pro",
-  emerald: "Emerald Business",
-  diamond: "Diamond Enterprise",
+  sapphire: "Sapphire Suite",
+  emerald: "Emerald Boutique",
+  diamond: "Diamond Presidential",
 };
 
 export const TIER_COLORS: Record<string, string> = {
@@ -44,3 +44,21 @@ export const STATUS_COLORS: Record<string, string> = {
 
 export const VALID_TIERS = ["ruby", "sapphire", "emerald", "diamond"];
 export const VALID_STATUSES = ["trialing", "active", "past_due", "canceled", "expired"];
+
+// Per-unit/property monthly prices by tier (matches main app stripe.ts)
+export const EXTRA_PROPERTY_PRICING: Record<string, number> = {
+  sapphire: 1.5,
+  emerald: 1.2,
+  diamond: 1.0,
+};
+
+export const EXTRA_UNIT_PRICING: Record<string, number> = {
+  sapphire: 1.5,
+  emerald: 1.2,
+  diamond: 1.0,
+};
+
+export const CRM_ADDON_PRICING = {
+  monthly: 29,
+  annual: 290,
+};

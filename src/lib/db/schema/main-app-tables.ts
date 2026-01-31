@@ -123,3 +123,20 @@ export const aiUsage = pgTable("ai_usage", {
   tokensOutput: integer("tokens_output").default(0),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// ============================================
+// CRM SUBSCRIPTIONS (Add-on tracking)
+// ============================================
+export const crmSubscriptions = pgTable("crm_subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").notNull(),
+  status: varchar("status", { length: 50 }).notNull().default("active"),
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+  stripePriceId: varchar("stripe_price_id", { length: 255 }),
+  billingPeriod: varchar("billing_period", { length: 20 }).default("monthly"),
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});

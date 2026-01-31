@@ -7,9 +7,11 @@ import {
   properties,
   units,
   aiUsage,
+  crmSubscriptions,
 } from "@/lib/db/schema/main-app-tables";
 import type { AdminOrgFilters, AdminStats } from "./types";
 import { TIER_PRICING } from "./constants";
+import { calculateAccountMonthlyTotal } from "./billing";
 
 export async function listOrganizations(filters: AdminOrgFilters) {
   const {
@@ -257,26 +259,53 @@ export async function getAdminStats(): Promise<AdminStats> {
     .from(organizations)
     .where(gte(organizations.createdAt, monthStart));
 
-  // Estimate MRR from active subscriptions
+  // Fetch active orgs with expansion fields
   const activeOrgs = await db
     .select({
       pricingTier: organizations.pricingTier,
       billingPeriod: organizations.billingPeriod,
+      extraPropertiesCount: organizations.extraPropertiesCount,
+      extraUnitsCount: organizations.extraUnitsCount,
+      id: organizations.id,
     })
     .from(organizations)
     .where(eq(organizations.subscriptionStatus, "active"));
 
-  let estimatedMrr = 0;
+  // Fetch active CRM subscriptions
+  const activeCrmSubs = await db
+    .select({
+      organizationId: crmSubscriptions.organizationId,
+      billingPeriod: crmSubscriptions.billingPeriod,
+    })
+    .from(crmSubscriptions)
+    .where(eq(crmSubscriptions.status, "active"));
+
+  const crmSubMap = new Map(
+    activeCrmSubs.map((s) => [s.organizationId, s.billingPeriod])
+  );
+
+  // Total units managed across all active orgs
+  const [totalUnitsResult] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(units)
+    .innerJoin(properties, eq(units.propertyId, properties.id))
+    .innerJoin(organizations, eq(properties.organizationId, organizations.id))
+    .where(eq(organizations.subscriptionStatus, "active"));
+
+  // Compute MRR breakdown
+  let baseMrr = 0;
+  let expansionMrr = 0;
+  let crmAddonMrr = 0;
   for (const org of activeOrgs) {
-    const tier = org.pricingTier || "ruby";
-    const pricing = TIER_PRICING[tier];
-    if (!pricing) continue;
-    if (org.billingPeriod === "annual") {
-      estimatedMrr += pricing.annual / 12;
-    } else {
-      estimatedMrr += pricing.monthly;
-    }
+    const hasCrm = crmSubMap.has(org.id);
+    const crmPeriod = crmSubMap.get(org.id) || "monthly";
+    const breakdown = calculateAccountMonthlyTotal(org, hasCrm, crmPeriod);
+    baseMrr += breakdown.baseMrr;
+    expansionMrr += breakdown.extraPropertiesMrr + breakdown.extraUnitsMrr;
+    crmAddonMrr += breakdown.crmAddonMrr;
   }
+
+  const estimatedMrr = baseMrr + expansionMrr + crmAddonMrr;
 
   const byStatus: Record<string, number> = {};
   for (const s of statusCounts) {
@@ -296,6 +325,11 @@ export async function getAdminStats(): Promise<AdminStats> {
     canceled: byStatus["canceled"] || 0,
     newThisMonth: newThisMonth?.count || 0,
     estimatedMrr: Math.round(estimatedMrr),
+    baseMrr: Math.round(baseMrr),
+    expansionMrr: Math.round(expansionMrr),
+    crmAddonMrr: Math.round(crmAddonMrr),
+    crmAddonCount: activeCrmSubs.length,
+    totalUnitsManaged: totalUnitsResult?.count || 0,
     byTier,
     byStatus,
   };

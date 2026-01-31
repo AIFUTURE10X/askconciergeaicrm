@@ -21,6 +21,8 @@ import {
   DollarSign,
   AlertTriangle,
   Clock,
+  Layers,
+  BedDouble,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -202,6 +204,16 @@ export default function CustomersPage() {
             <StatCard label="New This Month" value={stats.newThisMonth} icon={Users} color="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" />
             <StatCard label="Est. MRR" value={`$${stats.estimatedMrr.toLocaleString()}`} icon={DollarSign} color="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" />
             <StatCard label="Canceled" value={stats.canceled} icon={AlertTriangle} color="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" />
+          </div>
+        )}
+
+        {/* Revenue Breakdown */}
+        {stats && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <StatCard label="Base Revenue" value={`$${stats.baseMrr.toLocaleString()}/mo`} icon={DollarSign} color="bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400" />
+            <StatCard label="Expansion Revenue" value={`$${stats.expansionMrr.toLocaleString()}/mo`} icon={TrendingUp} color="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400" />
+            <StatCard label="CRM Add-ons" value={`${stats.crmAddonCount} ($${stats.crmAddonMrr}/mo)`} icon={Layers} color="bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-400" />
+            <StatCard label="Total Units" value={stats.totalUnitsManaged.toLocaleString()} icon={BedDouble} color="bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400" />
           </div>
         )}
 

@@ -49,6 +49,11 @@ export interface AdminStats {
   canceled: number;
   newThisMonth: number;
   estimatedMrr: number;
+  baseMrr: number;
+  expansionMrr: number;
+  crmAddonMrr: number;
+  crmAddonCount: number;
+  totalUnitsManaged: number;
   byTier: Record<string, number>;
   byStatus: Record<string, number>;
 }
