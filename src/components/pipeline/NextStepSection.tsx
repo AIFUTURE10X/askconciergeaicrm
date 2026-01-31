@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Linkify } from "@/components/ui/linkify";
 import { Calendar, AlertTriangle, Clock, Edit2, Save, X } from "lucide-react";
 
 interface NextStepSectionProps {
@@ -106,7 +107,9 @@ export function NextStepSection({
       ) : (
         <div className="space-y-2">
           {nextStep ? (
-            <p className="text-sm font-medium">{nextStep}</p>
+            <p className="text-sm font-medium">
+              <Linkify>{nextStep}</Linkify>
+            </p>
           ) : (
             <p className="text-sm text-muted-foreground italic">
               No next step defined - click Edit to add one

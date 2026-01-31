@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Building2,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useSidebar } from "@/components/layout/SidebarContext";
@@ -26,6 +27,7 @@ const navItems = [
   { href: "/pipeline", label: "Pipeline", icon: Kanban },
   { href: "/closed", label: "Closed", icon: Archive },
   { href: "/contacts", label: "Contacts", icon: Users },
+  { href: "/customers", label: "Customers", icon: Building2 },
   { href: "/reminders", label: "Reminders", icon: Bell },
 ];
 

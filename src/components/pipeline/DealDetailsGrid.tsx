@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Linkify } from "@/components/ui/linkify";
 import { Calendar, DollarSign, Building2, Pencil, Check, X } from "lucide-react";
 import {
   getTier,
@@ -178,7 +179,9 @@ export function DealDetailsGrid({ deal, onProbabilityChange }: DealDetailsGridPr
       {deal.notes && (
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">Notes</Label>
-          <p className="text-sm whitespace-pre-wrap bg-muted/30 p-3 rounded-md">{deal.notes}</p>
+          <p className="text-sm whitespace-pre-wrap bg-muted/30 p-3 rounded-md">
+            <Linkify>{deal.notes}</Linkify>
+          </p>
         </div>
       )}
     </>

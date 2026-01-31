@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Linkify } from "@/components/ui/linkify";
 import { Calendar, DollarSign, Building2, AlertTriangle, Clock, Trophy, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTier, getStage } from "@/lib/constants/pipeline";
@@ -278,7 +279,8 @@ export function DealCard({ deal, onClick, isSelected, onSelectChange, selectionM
           <div className="pt-2 border-t space-y-1">
             {deal.nextStep && (
               <p className="text-xs text-muted-foreground line-clamp-1">
-                <span className="font-medium text-foreground">Next:</span> {deal.nextStep}
+                <span className="font-medium text-foreground">Next:</span>{" "}
+                <Linkify>{deal.nextStep}</Linkify>
               </p>
             )}
             {hasFollowUp && !isOverdue && !isDueToday && (
