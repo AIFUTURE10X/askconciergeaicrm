@@ -1,7 +1,7 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { CHURN_REASON_LABELS } from "@/lib/admin/renewal-queries";
+import { CHURN_REASON_LABELS } from "@/lib/admin/renewal-constants";
 
 interface Props {
   reasons: Array<{ reason: string; count: number }>;

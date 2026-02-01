@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CHURN_REASON_LABELS } from "@/lib/admin/renewal-queries";
+import { CHURN_REASON_LABELS } from "@/lib/admin/renewal-constants";
 import type { ChurnRecord } from "@/lib/admin/renewal-queries";
 
 interface Props {
