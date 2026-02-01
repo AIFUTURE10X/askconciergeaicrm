@@ -9,9 +9,10 @@ import {
   aiUsage,
   crmSubscriptions,
 } from "@/lib/db/schema/main-app-tables";
-import type { AdminOrgFilters, AdminStats } from "./types";
-import { TIER_PRICING } from "./constants";
-import { calculateAccountMonthlyTotal } from "./billing";
+import type { AdminOrgFilters } from "./types";
+
+// Re-export for backwards compatibility
+export { getAdminStats } from "./stats-queries";
 
 export async function listOrganizations(filters: AdminOrgFilters) {
   const {
@@ -98,61 +99,62 @@ export async function listOrganizations(filters: AdminOrgFilters) {
     return { organizations: [], total, page, limit };
   }
 
-  const propertyCounts = await db
-    .select({
-      organizationId: properties.organizationId,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(properties)
-    .where(sql`${properties.organizationId} IN ${orgIds}`)
-    .groupBy(properties.organizationId);
+  const [propertyCounts, unitCounts, memberCounts, owners, activeCrmSubs] = await Promise.all([
+    db
+      .select({
+        organizationId: properties.organizationId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(properties)
+      .where(sql`${properties.organizationId} IN ${orgIds}`)
+      .groupBy(properties.organizationId),
 
-  const unitCounts = await db
-    .select({
-      organizationId: properties.organizationId,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(units)
-    .innerJoin(properties, eq(units.propertyId, properties.id))
-    .where(sql`${properties.organizationId} IN ${orgIds}`)
-    .groupBy(properties.organizationId);
+    db
+      .select({
+        organizationId: properties.organizationId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(units)
+      .innerJoin(properties, eq(units.propertyId, properties.id))
+      .where(sql`${properties.organizationId} IN ${orgIds}`)
+      .groupBy(properties.organizationId),
 
-  const memberCounts = await db
-    .select({
-      organizationId: organizationMembers.organizationId,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(organizationMembers)
-    .where(sql`${organizationMembers.organizationId} IN ${orgIds}`)
-    .groupBy(organizationMembers.organizationId);
+    db
+      .select({
+        organizationId: organizationMembers.organizationId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(organizationMembers)
+      .where(sql`${organizationMembers.organizationId} IN ${orgIds}`)
+      .groupBy(organizationMembers.organizationId),
 
-  const owners = await db
-    .select({
-      organizationId: organizationMembers.organizationId,
-      email: users.email,
-      name: users.name,
-    })
-    .from(organizationMembers)
-    .innerJoin(users, eq(users.id, organizationMembers.userId))
-    .where(
-      and(
-        eq(organizationMembers.role, "owner"),
-        sql`${organizationMembers.organizationId} IN ${orgIds}`
-      )
-    );
+    db
+      .select({
+        organizationId: organizationMembers.organizationId,
+        email: users.email,
+        name: users.name,
+      })
+      .from(organizationMembers)
+      .innerJoin(users, eq(users.id, organizationMembers.userId))
+      .where(
+        and(
+          eq(organizationMembers.role, "owner"),
+          sql`${organizationMembers.organizationId} IN ${orgIds}`
+        )
+      ),
 
-  // Batch fetch CRM addon status
-  const activeCrmSubs = await db
-    .select({ organizationId: crmSubscriptions.organizationId })
-    .from(crmSubscriptions)
-    .where(
-      and(
-        eq(crmSubscriptions.status, "active"),
-        sql`${crmSubscriptions.organizationId} IN ${orgIds}`
-      )
-    );
+    db
+      .select({ organizationId: crmSubscriptions.organizationId })
+      .from(crmSubscriptions)
+      .where(
+        and(
+          eq(crmSubscriptions.status, "active"),
+          sql`${crmSubscriptions.organizationId} IN ${orgIds}`
+        )
+      ),
+  ]);
+
   const crmAddonSet = new Set(activeCrmSubs.map((r) => r.organizationId));
-
   const propMap = new Map(propertyCounts.map((p) => [p.organizationId, p.count]));
   const unitMap = new Map(unitCounts.map((u) => [u.organizationId, u.count]));
   const memberMap = new Map(memberCounts.map((m) => [m.organizationId, m.count]));
@@ -179,50 +181,58 @@ export async function getOrganizationDetail(id: string) {
 
   if (!org) return null;
 
-  const [propCount] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(properties)
-    .where(eq(properties.organizationId, id));
+  const [propCountResult, unitCountResult, memberCountResult, ownerResult, crmSubResult] =
+    await Promise.all([
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(properties)
+        .where(eq(properties.organizationId, id)),
 
-  const [unitCount] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(units)
-    .innerJoin(properties, eq(units.propertyId, properties.id))
-    .where(eq(properties.organizationId, id));
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(units)
+        .innerJoin(properties, eq(units.propertyId, properties.id))
+        .where(eq(properties.organizationId, id)),
 
-  const [memberCount] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(organizationMembers)
-    .where(eq(organizationMembers.organizationId, id));
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(organizationMembers)
+        .where(eq(organizationMembers.organizationId, id)),
 
-  const [owner] = await db
-    .select({ email: users.email, name: users.name })
-    .from(organizationMembers)
-    .innerJoin(users, eq(users.id, organizationMembers.userId))
-    .where(
-      and(
-        eq(organizationMembers.organizationId, id),
-        eq(organizationMembers.role, "owner")
-      )
-    )
-    .limit(1);
+      db
+        .select({ email: users.email, name: users.name })
+        .from(organizationMembers)
+        .innerJoin(users, eq(users.id, organizationMembers.userId))
+        .where(
+          and(
+            eq(organizationMembers.organizationId, id),
+            eq(organizationMembers.role, "owner")
+          )
+        )
+        .limit(1),
 
-  // Fetch CRM subscription
-  const [crmSub] = await db
-    .select({
-      status: crmSubscriptions.status,
-      billingPeriod: crmSubscriptions.billingPeriod,
-      currentPeriodEnd: crmSubscriptions.currentPeriodEnd,
-      cancelAtPeriodEnd: crmSubscriptions.cancelAtPeriodEnd,
-    })
-    .from(crmSubscriptions)
-    .where(
-      and(
-        eq(crmSubscriptions.organizationId, id),
-        eq(crmSubscriptions.status, "active")
-      )
-    )
-    .limit(1);
+      db
+        .select({
+          status: crmSubscriptions.status,
+          billingPeriod: crmSubscriptions.billingPeriod,
+          currentPeriodEnd: crmSubscriptions.currentPeriodEnd,
+          cancelAtPeriodEnd: crmSubscriptions.cancelAtPeriodEnd,
+        })
+        .from(crmSubscriptions)
+        .where(
+          and(
+            eq(crmSubscriptions.organizationId, id),
+            eq(crmSubscriptions.status, "active")
+          )
+        )
+        .limit(1),
+    ]);
+
+  const [propCount] = propCountResult;
+  const [unitCount] = unitCountResult;
+  const [memberCount] = memberCountResult;
+  const [owner] = ownerResult;
+  const [crmSub] = crmSubResult;
 
   return {
     ...org,
@@ -273,109 +283,4 @@ export async function getOrganizationUsage(orgId: string) {
     .from(aiUsage)
     .where(eq(aiUsage.organizationId, orgId))
     .orderBy(desc(aiUsage.month));
-}
-
-export async function getAdminStats(): Promise<AdminStats> {
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  const [totals] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(organizations);
-
-  const statusCounts = await db
-    .select({
-      status: organizations.subscriptionStatus,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(organizations)
-    .groupBy(organizations.subscriptionStatus);
-
-  const tierCounts = await db
-    .select({
-      tier: organizations.pricingTier,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(organizations)
-    .groupBy(organizations.pricingTier);
-
-  const [newThisMonth] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(organizations)
-    .where(gte(organizations.createdAt, monthStart));
-
-  // Fetch active orgs with expansion fields
-  const activeOrgs = await db
-    .select({
-      pricingTier: organizations.pricingTier,
-      billingPeriod: organizations.billingPeriod,
-      extraPropertiesCount: organizations.extraPropertiesCount,
-      extraUnitsCount: organizations.extraUnitsCount,
-      id: organizations.id,
-    })
-    .from(organizations)
-    .where(eq(organizations.subscriptionStatus, "active"));
-
-  // Fetch active CRM subscriptions
-  const activeCrmSubs = await db
-    .select({
-      organizationId: crmSubscriptions.organizationId,
-      billingPeriod: crmSubscriptions.billingPeriod,
-    })
-    .from(crmSubscriptions)
-    .where(eq(crmSubscriptions.status, "active"));
-
-  const crmSubMap = new Map(
-    activeCrmSubs.map((s) => [s.organizationId, s.billingPeriod])
-  );
-
-  // Total units managed across all active orgs
-  const [totalUnitsResult] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(units)
-    .innerJoin(properties, eq(units.propertyId, properties.id))
-    .innerJoin(organizations, eq(properties.organizationId, organizations.id))
-    .where(eq(organizations.subscriptionStatus, "active"));
-
-  // Compute MRR breakdown
-  let baseMrr = 0;
-  let expansionMrr = 0;
-  let crmAddonMrr = 0;
-  for (const org of activeOrgs) {
-    const hasCrm = crmSubMap.has(org.id);
-    const crmPeriod = crmSubMap.get(org.id) || "monthly";
-    const breakdown = calculateAccountMonthlyTotal(org, hasCrm, crmPeriod);
-    baseMrr += breakdown.baseMrr;
-    expansionMrr += breakdown.extraPropertiesMrr + breakdown.extraUnitsMrr;
-    crmAddonMrr += breakdown.crmAddonMrr;
-  }
-
-  const estimatedMrr = baseMrr + expansionMrr + crmAddonMrr;
-
-  const byStatus: Record<string, number> = {};
-  for (const s of statusCounts) {
-    byStatus[s.status || "unknown"] = s.count;
-  }
-
-  const byTier: Record<string, number> = {};
-  for (const t of tierCounts) {
-    byTier[t.tier || "unknown"] = t.count;
-  }
-
-  return {
-    total: totals?.count || 0,
-    active: byStatus["active"] || 0,
-    trialing: byStatus["trialing"] || 0,
-    pastDue: byStatus["past_due"] || 0,
-    canceled: byStatus["canceled"] || 0,
-    newThisMonth: newThisMonth?.count || 0,
-    estimatedMrr: Math.round(estimatedMrr),
-    baseMrr: Math.round(baseMrr),
-    expansionMrr: Math.round(expansionMrr),
-    crmAddonMrr: Math.round(crmAddonMrr),
-    crmAddonCount: activeCrmSubs.length,
-    totalUnitsManaged: totalUnitsResult?.count || 0,
-    byTier,
-    byStatus,
-  };
 }

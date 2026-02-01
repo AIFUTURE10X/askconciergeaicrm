@@ -1,10 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { format } from "date-fns";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ActivityLogDialog } from "@/components/activities/ActivityLogDialog";
 import { EmailComposeDialog } from "@/components/email/EmailComposeDialog";
@@ -14,14 +10,9 @@ import { NextStepSection } from "./NextStepSection";
 import { DealContactCard } from "./DealContactCard";
 import { DealDetailsGrid } from "./DealDetailsGrid";
 import { DealActivitySection } from "./DealActivitySection";
-import { Trash2, Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import type { Deal, Contact, Activity } from "@/lib/db/schema";
-
-type ActivityWithRelations = Activity & {
-  deal?: Deal | null;
-  contact?: Contact | null;
-};
+import { DealMetadataFooter } from "./DealMetadataFooter";
+import { useDealActions } from "@/hooks/useDealActions";
+import type { Deal, Contact } from "@/lib/db/schema";
 
 interface DealDetailDrawerProps {
   deal: (Deal & { contact: Contact | null }) | null;
@@ -38,196 +29,11 @@ export function DealDetailDrawer({
   onUpdate,
   onDelete,
 }: DealDetailDrawerProps) {
-  const router = useRouter();
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
-  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
-  const [isLostDialogOpen, setIsLostDialogOpen] = useState(false);
-  const [activities, setActivities] = useState<ActivityWithRelations[]>([]);
-  const [isLoadingActivities, setIsLoadingActivities] = useState(false);
-  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-
-  // Next step editing state
-  const [isEditingNextStep, setIsEditingNextStep] = useState(false);
-  const [nextStepText, setNextStepText] = useState("");
-  const [followUpDateText, setFollowUpDateText] = useState("");
-
-  const fetchActivities = useCallback(async () => {
-    if (!deal) return;
-    setIsLoadingActivities(true);
-    try {
-      const res = await fetch(`/api/activities?dealId=${deal.id}&limit=10`);
-      if (res.ok) {
-        const { activities: data } = await res.json();
-        setActivities(data);
-      }
-    } catch (error) {
-      console.error("Error fetching activities:", error);
-    } finally {
-      setIsLoadingActivities(false);
-    }
-  }, [deal]);
-
-  useEffect(() => {
-    if (open && deal) {
-      fetchActivities();
-      setNextStepText(deal.nextStep || "");
-      setFollowUpDateText(
-        deal.followUpDate ? format(new Date(deal.followUpDate), "yyyy-MM-dd") : ""
-      );
-      setIsEditingNextStep(false);
-    }
-  }, [open, deal, fetchActivities]);
+  const a = useDealActions({ deal, open, onUpdate, onDelete, onOpenChange });
 
   if (!deal) return null;
 
   const isClosed = deal.stage === "closed_won" || deal.stage === "closed_lost";
-
-  const handleStageChange = async (newStage: string) => {
-    setIsUpdating(true);
-    try {
-      await onUpdate(deal.id, { stage: newStage });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleMarkWon = async () => {
-    setIsUpdating(true);
-    try {
-      await onUpdate(deal.id, { stage: "closed_won", lastStage: deal.stage });
-      onOpenChange(false);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleMarkLost = () => {
-    setIsLostDialogOpen(true);
-  };
-
-  const handleLostConfirm = async (reason: string, notes?: string) => {
-    setIsUpdating(true);
-    try {
-      await onUpdate(deal.id, {
-        stage: "closed_lost",
-        lostReason: reason,
-        lastStage: deal.stage,
-        notes: notes
-          ? deal.notes
-            ? `${deal.notes}\n\nLost reason: ${notes}`
-            : `Lost reason: ${notes}`
-          : deal.notes,
-      });
-      onOpenChange(false);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this deal?")) return;
-    setIsDeleting(true);
-    try {
-      await onDelete(deal.id);
-      onOpenChange(false);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleSaveNextStep = async () => {
-    setIsUpdating(true);
-    try {
-      await onUpdate(deal.id, {
-        nextStep: nextStepText || null,
-        followUpDate: followUpDateText ? new Date(followUpDateText) : null,
-      });
-      setIsEditingNextStep(false);
-      toast.success("Next step saved");
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleCancelNextStep = () => {
-    setNextStepText(deal.nextStep || "");
-    setFollowUpDateText(
-      deal.followUpDate ? format(new Date(deal.followUpDate), "yyyy-MM-dd") : ""
-    );
-    setIsEditingNextStep(false);
-  };
-
-  const handleLogActivity = async (data: {
-    type: string;
-    subject?: string;
-    description?: string;
-    outcome?: string;
-  }) => {
-    const res = await fetch("/api/activities", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...data, dealId: deal.id, contactId: deal.contactId }),
-    });
-
-    if (!res.ok) throw new Error("Failed to log activity");
-
-    const { activity } = await res.json();
-    setActivities((prev) => [activity, ...prev]);
-    toast.success("Activity logged");
-  };
-
-  const handleEmailSent = async (data: {
-    type: string;
-    subject?: string;
-    description?: string;
-  }) => {
-    const res = await fetch("/api/activities", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...data,
-        dealId: deal.id,
-        contactId: deal.contactId,
-        outcome: "completed",
-      }),
-    });
-
-    if (!res.ok) throw new Error("Failed to log email activity");
-
-    const { activity } = await res.json();
-    setActivities((prev) => [activity, ...prev]);
-  };
-
-  const handleGenerateAIResponse = async () => {
-    if (!deal.contact?.email) {
-      toast.error("Contact has no email address");
-      return;
-    }
-
-    setIsGeneratingAI(true);
-    try {
-      const res = await fetch(`/api/deals/${deal.id}/generate-draft`, {
-        method: "POST",
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to generate draft");
-      }
-
-      const { draftId } = await res.json();
-      toast.success("AI draft generated! Opening in Inbox...");
-      onOpenChange(false);
-      router.push(`/inbox?draft=${draftId}`);
-    } catch (error) {
-      console.error("Error generating AI draft:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to generate AI response");
-    } finally {
-      setIsGeneratingAI(false);
-    }
-  };
 
   return (
     <>
@@ -240,25 +46,25 @@ export function DealDetailDrawer({
           <div className="space-y-5">
             <DealStageSelector
               stage={deal.stage}
-              onStageChange={handleStageChange}
-              onMarkWon={handleMarkWon}
-              onMarkLost={handleMarkLost}
-              isUpdating={isUpdating}
+              onStageChange={a.handleStageChange}
+              onMarkWon={a.handleMarkWon}
+              onMarkLost={a.handleMarkLost}
+              isUpdating={a.isUpdating}
             />
 
             {!isClosed && (
               <NextStepSection
                 nextStep={deal.nextStep}
                 followUpDate={deal.followUpDate}
-                isEditing={isEditingNextStep}
-                nextStepText={nextStepText}
-                followUpDateText={followUpDateText}
-                isUpdating={isUpdating}
-                onEditStart={() => setIsEditingNextStep(true)}
-                onSave={handleSaveNextStep}
-                onCancel={handleCancelNextStep}
-                onNextStepChange={setNextStepText}
-                onFollowUpDateChange={setFollowUpDateText}
+                isEditing={a.isEditingNextStep}
+                nextStepText={a.nextStepText}
+                followUpDateText={a.followUpDateText}
+                isUpdating={a.isUpdating}
+                onEditStart={() => a.setIsEditingNextStep(true)}
+                onSave={a.handleSaveNextStep}
+                onCancel={a.handleCancelNextStep}
+                onNextStepChange={a.setNextStepText}
+                onFollowUpDateChange={a.setFollowUpDateText}
               />
             )}
 
@@ -267,9 +73,9 @@ export function DealDetailDrawer({
             {deal.contact && (
               <DealContactCard
                 contact={deal.contact}
-                onEmailClick={() => setIsEmailDialogOpen(true)}
-                onAIResponseClick={handleGenerateAIResponse}
-                isGeneratingAI={isGeneratingAI}
+                onEmailClick={() => a.setIsEmailDialogOpen(true)}
+                onAIResponseClick={a.handleGenerateAIResponse}
+                isGeneratingAI={a.isGeneratingAI}
               />
             )}
 
@@ -283,64 +89,47 @@ export function DealDetailDrawer({
             <Separator />
 
             <DealActivitySection
-              activities={activities}
-              isLoading={isLoadingActivities}
-              onLogClick={() => setIsActivityDialogOpen(true)}
+              activities={a.activities}
+              isLoading={a.isLoadingActivities}
+              onLogClick={() => a.setIsActivityDialogOpen(true)}
             />
 
             <Separator />
 
-            {/* Metadata */}
-            <div className="text-xs text-muted-foreground space-y-1 pb-2">
-              <div>Created: {format(new Date(deal.createdAt), "MMM d, yyyy h:mm a")}</div>
-              <div>Updated: {format(new Date(deal.updatedAt), "MMM d, yyyy h:mm a")}</div>
-              {deal.closedAt && (
-                <div>Closed: {format(new Date(deal.closedAt), "MMM d, yyyy h:mm a")}</div>
-              )}
-            </div>
-
-            <Button
-              variant="ghost"
-              className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={handleDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
-              )}
-              Delete Deal
-            </Button>
+            <DealMetadataFooter
+              deal={deal}
+              isDeleting={a.isDeleting}
+              onDelete={a.handleDelete}
+            />
           </div>
         </SheetContent>
       </Sheet>
 
       <ActivityLogDialog
-        open={isActivityDialogOpen}
-        onOpenChange={setIsActivityDialogOpen}
+        open={a.isActivityDialogOpen}
+        onOpenChange={a.setIsActivityDialogOpen}
         dealId={deal.id}
         contactId={deal.contactId || undefined}
-        onSubmit={handleLogActivity}
+        onSubmit={a.handleLogActivity}
       />
 
       {deal.contact?.email && (
         <EmailComposeDialog
-          open={isEmailDialogOpen}
-          onOpenChange={setIsEmailDialogOpen}
+          open={a.isEmailDialogOpen}
+          onOpenChange={a.setIsEmailDialogOpen}
           recipientEmail={deal.contact.email}
           recipientName={deal.contact.name}
           contactId={deal.contactId || undefined}
           dealId={deal.id}
-          onEmailSent={handleEmailSent}
+          onEmailSent={a.handleEmailSent}
         />
       )}
 
       <LostReasonDialog
-        open={isLostDialogOpen}
-        onOpenChange={setIsLostDialogOpen}
+        open={a.isLostDialogOpen}
+        onOpenChange={a.setIsLostDialogOpen}
         dealTitle={deal.title}
-        onConfirm={handleLostConfirm}
+        onConfirm={a.handleLostConfirm}
       />
     </>
   );

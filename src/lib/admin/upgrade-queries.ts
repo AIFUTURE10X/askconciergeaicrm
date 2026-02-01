@@ -9,7 +9,7 @@ import {
   organizationMembers,
   users,
 } from "@/lib/db/schema/main-app-tables";
-import { TIER_LIMITS, TIER_PRICING } from "./constants";
+import { TIER_LIMITS, TIER_PRICING, getCurrentMonth } from "./constants";
 
 // ============================================
 // Types
@@ -258,7 +258,3 @@ export async function getUpgradeOpportunities(): Promise<{
   return { opportunities, stats };
 }
 
-function getCurrentMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
