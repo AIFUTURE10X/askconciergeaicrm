@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import {
   Search,
   Loader2,
@@ -16,13 +15,6 @@ import {
   Eye,
   X,
   Building2,
-  Users,
-  TrendingUp,
-  DollarSign,
-  AlertTriangle,
-  Clock,
-  Layers,
-  BedDouble,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -34,35 +26,13 @@ import {
   VALID_STATUSES,
 } from "@/lib/admin/constants";
 import type { AdminOrganization, AdminStats } from "@/lib/admin/types";
+import { CustomerStatsBar } from "@/components/customers/CustomerStatsBar";
+import type { ActiveCardFilter } from "@/components/customers/CustomerStatsBar";
 import { CustomerDetailPanel } from "@/components/customers/CustomerDetailPanel";
 import { CustomerBulkActions } from "@/components/customers/CustomerBulkActions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { HealthBadge } from "@/components/customers/health/HealthBadge";
 import type { CustomerHealthData } from "@/lib/admin/health";
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  color,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ComponentType<{ className?: string }>;
-  color: string;
-}) {
-  return (
-    <Card className="p-3 sm:p-4 flex items-center gap-3">
-      <div className={cn("p-2 rounded-lg", color)}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <div>
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-lg font-semibold">{value}</p>
-      </div>
-    </Card>
-  );
-}
 
 export default function CustomersPage() {
   const [orgs, setOrgs] = useState<AdminOrganization[]>([]);
@@ -76,6 +46,25 @@ export default function CustomersPage() {
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [monthFilter, setMonthFilter] = useState("");
+  const [hasCrmAddon, setHasCrmAddon] = useState(false);
+  const [activeCard, setActiveCard] = useState<ActiveCardFilter>(null);
+
+  // Generate months from current month back to Jan 2026
+  const monthOptions = useMemo(() => {
+    const options: { value: string; label: string }[] = [];
+    const now = new Date();
+    const startYear = 2026;
+    const startMonth = 0; // January (0-indexed)
+    for (let i = 0; ; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      if (d.getFullYear() < startYear || (d.getFullYear() === startYear && d.getMonth() < startMonth)) break;
+      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const label = d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+      options.push({ value, label });
+    }
+    return options;
+  }, []);
 
   // Sort
   const [sort, setSort] = useState("createdAt");
@@ -116,6 +105,12 @@ export default function CustomersPage() {
       if (search) params.set("search", search);
       if (tierFilter) params.set("tier", tierFilter);
       if (statusFilter) params.set("status", statusFilter);
+      if (monthFilter) {
+        const [year, month] = monthFilter.split("-").map(Number);
+        params.set("dateFrom", new Date(year, month - 1, 1).toISOString());
+        params.set("dateTo", new Date(year, month, 0, 23, 59, 59, 999).toISOString());
+      }
+      if (hasCrmAddon) params.set("hasCrmAddon", "true");
       params.set("sort", sort);
       params.set("order", order);
       params.set("page", String(page));
@@ -132,7 +127,7 @@ export default function CustomersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [search, tierFilter, statusFilter, sort, order, page, limit]);
+  }, [search, tierFilter, statusFilter, monthFilter, hasCrmAddon, sort, order, page, limit]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -182,14 +177,22 @@ export default function CustomersPage() {
   // Reset to page 1 when filters change
   const handleSearch = (value: string) => {
     setSearch(value);
+    setActiveCard(null);
     setPage(1);
   };
   const handleTierFilter = (value: string) => {
     setTierFilter(value);
+    setActiveCard(null);
     setPage(1);
   };
   const handleStatusFilter = (value: string) => {
     setStatusFilter(value);
+    setActiveCard(null);
+    setPage(1);
+  };
+  const handleMonthFilter = (value: string) => {
+    setMonthFilter(value);
+    setActiveCard(null);
     setPage(1);
   };
 
@@ -207,10 +210,55 @@ export default function CustomersPage() {
     setSearch("");
     setTierFilter("");
     setStatusFilter("");
+    setMonthFilter("");
+    setHasCrmAddon(false);
+    setActiveCard(null);
     setPage(1);
   };
 
-  const hasFilters = search || tierFilter || statusFilter;
+  const handleCardClick = (card: ActiveCardFilter) => {
+    // Toggle: clicking active card clears it
+    if (card === activeCard) {
+      clearFilters();
+      return;
+    }
+
+    // Clear all filters first
+    setSearch("");
+    setTierFilter("");
+    setStatusFilter("");
+    setMonthFilter("");
+    setHasCrmAddon(false);
+    setPage(1);
+
+    // Apply card-specific filter
+    switch (card) {
+      case "total":
+        // Show all — no filters
+        break;
+      case "active":
+        setStatusFilter("active");
+        break;
+      case "trialing":
+        setStatusFilter("trialing");
+        break;
+      case "newThisMonth": {
+        const now = new Date();
+        const value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        setMonthFilter(value);
+        break;
+      }
+      case "canceled":
+        setStatusFilter("canceled");
+        break;
+      case "crmAddons":
+        setHasCrmAddon(true);
+        break;
+    }
+    setActiveCard(card);
+  };
+
+  const hasFilters = search || tierFilter || statusFilter || monthFilter || hasCrmAddon;
   const totalPages = Math.ceil(total / limit);
   const startItem = (page - 1) * limit + 1;
   const endItem = Math.min(page * limit, total);
@@ -222,24 +270,11 @@ export default function CustomersPage() {
       <div className="p-3 sm:p-4 md:p-6 space-y-4">
         {/* Stats Bar */}
         {stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <StatCard label="Total Orgs" value={stats.total} icon={Building2} color="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" />
-            <StatCard label="Active" value={stats.active} icon={TrendingUp} color="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" />
-            <StatCard label="Trialing" value={stats.trialing} icon={Clock} color="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" />
-            <StatCard label="New This Month" value={stats.newThisMonth} icon={Users} color="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" />
-            <StatCard label="Est. MRR" value={`$${stats.estimatedMrr.toLocaleString()}`} icon={DollarSign} color="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" />
-            <StatCard label="Canceled" value={stats.canceled} icon={AlertTriangle} color="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" />
-          </div>
-        )}
-
-        {/* Revenue Breakdown */}
-        {stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatCard label="Base Revenue" value={`$${stats.baseMrr.toLocaleString()}/mo`} icon={DollarSign} color="bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400" />
-            <StatCard label="Expansion Revenue" value={`$${stats.expansionMrr.toLocaleString()}/mo`} icon={TrendingUp} color="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400" />
-            <StatCard label="CRM Add-ons" value={`${stats.crmAddonCount} ($${stats.crmAddonMrr}/mo)`} icon={Layers} color="bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-400" />
-            <StatCard label="Total Units" value={stats.totalUnitsManaged.toLocaleString()} icon={BedDouble} color="bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400" />
-          </div>
+          <CustomerStatsBar
+            stats={stats}
+            activeCard={activeCard}
+            onCardClick={handleCardClick}
+          />
         )}
 
         {/* Tier breakdown badges */}
@@ -282,6 +317,16 @@ export default function CustomersPage() {
             <option value="">All Statuses</option>
             {VALID_STATUSES.map((s) => (
               <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+            ))}
+          </select>
+          <select
+            value={monthFilter}
+            onChange={(e) => handleMonthFilter(e.target.value)}
+            className="h-9 rounded-md border bg-background px-3 text-sm"
+          >
+            <option value="">All Time</option>
+            {monthOptions.map((m) => (
+              <option key={m.value} value={m.value}>{m.label}</option>
             ))}
           </select>
           {hasFilters && (
@@ -330,6 +375,7 @@ export default function CustomersPage() {
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Health</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Properties</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Members</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expansion</th>
                     <SortHeader label="Created" column="createdAt" sort={sort} order={order} onSort={toggleSort} />
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
                   </tr>
@@ -379,6 +425,9 @@ export default function CustomersPage() {
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">{org.propertyCount}</td>
                       <td className="px-4 py-3 text-muted-foreground">{org.memberCount}</td>
+                      <td className="px-4 py-3">
+                        <ExpansionBadges org={org} />
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">
                         {new Date(org.createdAt).toLocaleDateString()}
                       </td>
@@ -443,6 +492,36 @@ export default function CustomersPage() {
         />
       )}
     </>
+  );
+}
+
+function ExpansionBadges({ org }: { org: AdminOrganization }) {
+  const extraProps = org.extraPropertiesCount || 0;
+  const extraUnits = org.extraUnitsCount || 0;
+  const hasCrm = org.hasCrmAddon;
+
+  if (!extraProps && !extraUnits && !hasCrm) {
+    return <span className="text-xs text-muted-foreground">&mdash;</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {extraProps > 0 && (
+        <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400">
+          +{extraProps} props
+        </span>
+      )}
+      {extraUnits > 0 && (
+        <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+          +{extraUnits} units
+        </span>
+      )}
+      {hasCrm && (
+        <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+          CRM
+        </span>
+      )}
+    </div>
   );
 }
 

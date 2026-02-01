@@ -24,6 +24,7 @@ export async function listOrganizations(filters: AdminOrgFilters) {
     limit = 20,
     dateFrom,
     dateTo,
+    hasCrmAddon,
   } = filters;
 
   const conditions = [];
@@ -41,6 +42,11 @@ export async function listOrganizations(filters: AdminOrgFilters) {
   }
   if (dateTo) {
     conditions.push(lte(organizations.createdAt, new Date(dateTo)));
+  }
+  if (hasCrmAddon) {
+    conditions.push(
+      sql`${organizations.id} IN (SELECT ${crmSubscriptions.organizationId} FROM ${crmSubscriptions} WHERE ${crmSubscriptions.status} = 'active')`
+    );
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -135,6 +141,18 @@ export async function listOrganizations(filters: AdminOrgFilters) {
       )
     );
 
+  // Batch fetch CRM addon status
+  const activeCrmSubs = await db
+    .select({ organizationId: crmSubscriptions.organizationId })
+    .from(crmSubscriptions)
+    .where(
+      and(
+        eq(crmSubscriptions.status, "active"),
+        sql`${crmSubscriptions.organizationId} IN ${orgIds}`
+      )
+    );
+  const crmAddonSet = new Set(activeCrmSubs.map((r) => r.organizationId));
+
   const propMap = new Map(propertyCounts.map((p) => [p.organizationId, p.count]));
   const unitMap = new Map(unitCounts.map((u) => [u.organizationId, u.count]));
   const memberMap = new Map(memberCounts.map((m) => [m.organizationId, m.count]));
@@ -146,6 +164,7 @@ export async function listOrganizations(filters: AdminOrgFilters) {
     unitCount: unitMap.get(org.id) || 0,
     memberCount: memberMap.get(org.id) || 0,
     owner: ownerMap.get(org.id) || null,
+    hasCrmAddon: crmAddonSet.has(org.id),
   }));
 
   return { organizations: result, total, page, limit };
@@ -188,12 +207,38 @@ export async function getOrganizationDetail(id: string) {
     )
     .limit(1);
 
+  // Fetch CRM subscription
+  const [crmSub] = await db
+    .select({
+      status: crmSubscriptions.status,
+      billingPeriod: crmSubscriptions.billingPeriod,
+      currentPeriodEnd: crmSubscriptions.currentPeriodEnd,
+      cancelAtPeriodEnd: crmSubscriptions.cancelAtPeriodEnd,
+    })
+    .from(crmSubscriptions)
+    .where(
+      and(
+        eq(crmSubscriptions.organizationId, id),
+        eq(crmSubscriptions.status, "active")
+      )
+    )
+    .limit(1);
+
   return {
     ...org,
     propertyCount: propCount?.count || 0,
     unitCount: unitCount?.count || 0,
     memberCount: memberCount?.count || 0,
     owner: owner || null,
+    hasCrmAddon: !!crmSub,
+    crmSubscription: crmSub
+      ? {
+          status: crmSub.status,
+          billingPeriod: crmSub.billingPeriod || "monthly",
+          currentPeriodEnd: crmSub.currentPeriodEnd,
+          cancelAtPeriodEnd: crmSub.cancelAtPeriodEnd ?? false,
+        }
+      : null,
   };
 }
 

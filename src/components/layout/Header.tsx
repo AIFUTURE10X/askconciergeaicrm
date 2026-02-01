@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Plus, Menu } from "lucide-react";
+import { Bell, Plus, Menu, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMobileNav } from "@/components/layout/MobileNavContext";
 
@@ -31,6 +31,17 @@ export function Header({ title, description, action }: HeaderProps) {
             <span className="sr-only">Open menu</span>
           </Button>
         )}
+        <a
+          href="https://askconciergeai.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          title="Open AskConciergeAI website"
+        >
+          <ExternalLink className="h-4 w-4" />
+          <span className="hidden sm:inline">Website</span>
+        </a>
+        <div className="h-5 w-px bg-border hidden sm:block" />
         <div>
           <h1 className="text-lg sm:text-xl font-semibold">{title}</h1>
           {description && (

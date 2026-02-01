@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
       limit: params.get("limit") ? parseInt(params.get("limit")!) : undefined,
       dateFrom: params.get("dateFrom") || undefined,
       dateTo: params.get("dateTo") || undefined,
+      hasCrmAddon: params.get("hasCrmAddon") === "true" || undefined,
     };
 
     const result = await listOrganizations(filters);

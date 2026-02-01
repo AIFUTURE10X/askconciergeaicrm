@@ -4,12 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:webpack": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "seed:test": "dotenv -e .env.local -- npx tsx scripts/seed-test-accounting.ts",
+    "seed:cleanup": "dotenv -e .env.local -- npx tsx scripts/cleanup-test-accounting.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

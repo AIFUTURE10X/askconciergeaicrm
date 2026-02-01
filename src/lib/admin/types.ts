@@ -22,11 +22,18 @@ export interface AdminOrganization {
   unitCount: number;
   memberCount: number;
   owner: { email: string; name: string | null } | null;
+  hasCrmAddon: boolean;
 }
 
 export interface AdminOrgDetail extends AdminOrganization {
   customDomain: string | null;
   logoUrl: string | null;
+  crmSubscription: {
+    status: string;
+    billingPeriod: string;
+    currentPeriodEnd: Date | null;
+    cancelAtPeriodEnd: boolean;
+  } | null;
 }
 
 export interface AdminOrgFilters {
@@ -39,6 +46,7 @@ export interface AdminOrgFilters {
   limit?: number;
   dateFrom?: string;
   dateTo?: string;
+  hasCrmAddon?: boolean;
 }
 
 export interface AdminStats {
